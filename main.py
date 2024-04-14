@@ -1,4 +1,4 @@
-from flask import Flask, request, abort
+from flask import Flask, request, abort, send_from_directory
 
 import markdown
 from bs4 import BeautifulSoup
@@ -23,6 +23,7 @@ from linebot.v3.webhooks import (
 
 import os
 import requests
+import logging
 
 HF_TOKEN = os.environ.get('HF_TOKEN')
 headers = {"Authorization": f"Bearer {HF_TOKEN}"}
@@ -33,8 +34,16 @@ def query(payload):
 
 app = Flask(__name__)
 
-configuration = Configuration(access_token='YOUR_CHANNEL_ACCESS_TOKEN')
-handler = WebhookHandler('YOUR_CHANNEL_SECRET')
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+app.logger.setLevel(logging.INFO)
+
+channel_secret = os.getenv('YOUR_CHANNEL_SECRET', None)
+channel_access_token = os.getenv('YOUR_CHANNEL_ACCESS_TOKEN', None)
+
+handler = WebhookHandler(channel_secret)
+configuration = Configuration(
+    access_token=channel_access_token
+)
 
 @app.route("/")
 def home():
@@ -71,3 +80,7 @@ def handle_message(event):
                 messages=[TextMessage(text=soup.get_text())]
             )
         )
+
+@app.route('/static/<path:path>')
+def send_static_content(path):
+    return send_from_directory('static', path)
