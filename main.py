@@ -36,6 +36,9 @@ app = Flask(__name__)
 configuration = Configuration(access_token='YOUR_CHANNEL_ACCESS_TOKEN')
 handler = WebhookHandler('YOUR_CHANNEL_SECRET')
 
+@app.route("/")
+def home():
+    return {"message": "Line Webhook Server"}
 
 @app.route("/callback", methods=['POST'])
 def callback():
