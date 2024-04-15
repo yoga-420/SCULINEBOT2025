@@ -21,6 +21,7 @@ from linebot.v3.webhooks import (
     TextMessageContent
 )
 from linebot import LineBotApi
+from linebot.models import TextSendMessage
 
 import os
 import requests
@@ -76,7 +77,8 @@ def handle_message(event):
         response = query({"inputs": event.message.text})
         html_msg = markdown.markdown(response)
         soup = BeautifulSoup(html_msg, 'html.parser')
-        line_bot_api.reply_message(event.reply_token, soup.get_text())
+        message = TextSendMessage(text=soup.get_text())
+        line_bot_api.reply_message(event.reply_token, messages=message)
 
 @app.route('/static/<path:path>')
 def send_static_content(path):
