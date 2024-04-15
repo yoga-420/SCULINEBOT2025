@@ -72,7 +72,7 @@ def callback():
 def handle_message(event):
     with ApiClient(configuration) as api_client:
         line_bot_api = MessagingApi(api_client)
-        response = query({"inputs": input, "parameters":{"return_full_text":False, "max_length":1024}})
+        response = query(event.message.text)
         html_msg = markdown.markdown(response)
         soup = BeautifulSoup(html_msg, 'html.parser')
         line_bot_api.reply_message(
