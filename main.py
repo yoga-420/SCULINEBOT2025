@@ -20,6 +20,7 @@ from linebot.v3.webhooks import (
     MessageEvent,
     TextMessageContent
 )
+from linebot import LineBotApi
 
 import os
 import requests
@@ -43,9 +44,10 @@ channel_secret = os.environ.get('YOUR_CHANNEL_SECRET')
 channel_access_token = os.environ.get('YOUR_CHANNEL_ACCESS_TOKEN')
 
 handler = WebhookHandler(channel_secret)
-configuration = Configuration(
-    access_token=channel_access_token
-)
+# configuration = Configuration(
+#     access_token=channel_access_token
+# )
+line_bot_api = LineBotApi(channel_access_token)
 
 @app.route("/")
 def home():
@@ -71,17 +73,10 @@ def callback():
 
 @handler.add(MessageEvent, message=(TextMessage, TextMessageContent))
 def handle_message(event):
-    with ApiClient(configuration) as api_client:
-        line_bot_api = MessagingApi(api_client)
         response = query({"inputs": event.message.text})
         html_msg = markdown.markdown(response)
         soup = BeautifulSoup(html_msg, 'html.parser')
-        line_bot_api.reply_message(
-            ReplyMessageRequest(
-                reply_token=event.reply_token,
-                messages=[TextMessage(text=soup.get_text())]
-            )
-        )
+        line_bot_api.reply_message(event.reply_token, soup.get_text())
 
 @app.route('/static/<path:path>')
 def send_static_content(path):
