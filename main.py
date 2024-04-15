@@ -32,7 +32,7 @@ API_URL = "https://api-inference.huggingface.co/models/mistralai/Mixtral-8x7B-In
 def query(payload):
     response = requests.post(API_URL, headers=headers, json=payload)
     app.logger.info("-----"+response.text)
-    return response
+    return response.text
 
 app = Flask(__name__)
 
