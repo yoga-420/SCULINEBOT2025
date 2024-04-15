@@ -31,8 +31,8 @@ headers = {"Authorization": f"Bearer {HF_TOKEN}"}
 API_URL = "https://api-inference.huggingface.co/models/mistralai/Mixtral-8x7B-Instruct-v0.1"
 def query(payload):
     response = requests.post(API_URL, headers=headers, json=payload)
-    app.logger.info("-------"+response.text)
-    return json.loads(response)
+    app.logger.info("-----"+response.text)
+    return response.json()
 
 app = Flask(__name__)
 
@@ -73,7 +73,7 @@ def callback():
 def handle_message(event):
     with ApiClient(configuration) as api_client:
         line_bot_api = MessagingApi(api_client)
-        response = query(event.message.text)
+        response = query({"inputs": event.message.text})
         html_msg = markdown.markdown(response)
         soup = BeautifulSoup(html_msg, 'html.parser')
         line_bot_api.reply_message(
