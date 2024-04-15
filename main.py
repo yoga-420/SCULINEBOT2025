@@ -39,8 +39,8 @@ app = Flask(__name__)
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 app.logger.setLevel(logging.INFO)
 
-channel_secret = os.getenv('YOUR_CHANNEL_SECRET', None)
-channel_access_token = os.getenv('YOUR_CHANNEL_ACCESS_TOKEN', None)
+channel_secret = os.environ.get('YOUR_CHANNEL_SECRET')
+channel_access_token = os.environ.get('YOUR_CHANNEL_ACCESS_TOKEN')
 
 handler = WebhookHandler(channel_secret)
 configuration = Configuration(
