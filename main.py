@@ -31,8 +31,7 @@ headers = {"Authorization": f"Bearer {HF_TOKEN}"}
 API_URL = "https://api-inference.huggingface.co/models/mistralai/Mixtral-8x7B-Instruct-v0.1"
 def query(payload):
     response = requests.post(API_URL, headers=headers, json=payload)
-    app.logger.info("-----"+response.text)
-    return response.text
+    return json.dumps(response.text)
 
 app = Flask(__name__)
 
