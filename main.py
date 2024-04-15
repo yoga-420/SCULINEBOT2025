@@ -3,9 +3,9 @@ from flask import Flask, request, abort, send_from_directory
 import markdown
 from bs4 import BeautifulSoup
 
-from linebot.v3 import (
-    WebhookHandler
-)
+# from linebot.v3 import (
+#     WebhookHandler
+# )
 from linebot.v3.exceptions import (
     InvalidSignatureError
 )
@@ -20,7 +20,7 @@ from linebot.v3.webhooks import (
     MessageEvent,
     TextMessageContent
 )
-from linebot import LineBotApi
+from linebot import LineBotApi, WebhookHandler
 from linebot.models import TextSendMessage
 
 import os
