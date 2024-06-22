@@ -25,11 +25,19 @@ import os
 import requests
 import logging
 
-HF_TOKEN = os.environ.get('HF_TOKEN')
-headers = {"Authorization": f"Bearer {HF_TOKEN}"}
-API_URL = "https://api-inference.huggingface.co/models/mistralai/Mixtral-8x7B-Instruct-v0.1"
+import google.generativeai as genai
+
+# HF_TOKEN = os.environ.get('HF_TOKEN')
+# headers = {"Authorization": f"Bearer {HF_TOKEN}"}
+
+GOOGLE_API_KEY = os.environ.get('GOOGLE_API_KEY')
+genai.configure(api_key=GOOGLE_API_KEY)
+model = genai.GenerativeModel('gemini-1.5-flash')
+
+# API_URL = "https://api-inference.huggingface.co/models/mistralai/Mixtral-8x7B-Instruct-v0.1"
 def query(payload):
-    response = requests.post(API_URL, headers=headers, json=payload)
+    # response = requests.post(API_URL, headers=headers, json=payload)
+    response = model.generate_content(payload)
     return response.text
 
 app = Flask(__name__)
@@ -69,7 +77,7 @@ def callback():
 def handle_message(event):
     with ApiClient(configuration) as api_client:
         line_bot_api = MessagingApi(api_client)
-        response = query({"inputs": event.message.text})
+        response = query(event.message.text)
         html_msg = markdown.markdown(response)
         soup = BeautifulSoup(html_msg, 'html.parser')
         line_bot_api.reply_message_with_http_info(
