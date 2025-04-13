@@ -44,6 +44,7 @@ genai.configure(api_key=GOOGLE_API_KEY)
 model = genai.GenerativeModel('gemini-2.0-flash')
 
 static_tmp_path = os.path.join(os.path.dirname("."), 'static', 'tmp')
+os.makedirs(static_tmp_path, exist_ok=True)
 
 # API_URL = "https://api-inference.huggingface.co/models/mistralai/Mixtral-8x7B-Instruct-v0.1"
 def query(payload):
