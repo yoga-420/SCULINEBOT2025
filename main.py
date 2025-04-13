@@ -103,7 +103,7 @@ def handle_message(event):
                 messages=[TextMessage(text=soup.get_text())]
             )
         )
-
+'''
 @handler.add(MessageEvent, message=ImageMessageContent)
 def handle_content_message(event):
     ext = 'jpg'
@@ -116,9 +116,24 @@ def handle_content_message(event):
 
     dist_path = tempfile_path + '.' + ext
     dist_name = os.path.basename(dist_path)
-    # os.rename(tempfile_path, dist_path)
+    os.rename(tempfile_path, dist_path)
+    filename = os.path.basename(dist_path)
 
-    image_url = f"{base_url}/images/{dist_name}"
+    image_url = f"{base_url}/images/{filename}"
+'''
+
+@handler.add(MessageEvent, message=ImageMessageContent)
+def handle_content_message(event):
+    ext = 'jpg'
+    with ApiClient(configuration) as api_client:
+        blob_api = MessagingApiBlob(api_client)
+        content = blob_api.get_message_content(message_id=event.message.id)
+
+    with tempfile.NamedTemporaryFile(dir=static_tmp_path, suffix='.' + ext, delete=False) as tf:
+        tf.write(content)
+        filename = os.path.basename(tf.name)
+
+    image_url = f"{base_url}/images/{filename}"
 
     with ApiClient(configuration) as api_client:
         line_bot_api = MessagingApi(api_client)
