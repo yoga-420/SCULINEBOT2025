@@ -118,7 +118,7 @@ def handle_content_message(event):
     dist_name = os.path.basename(dist_path)
     # os.rename(tempfile_path, dist_path)
 
-    image_url = f"{base_url}/images{dist_name}"
+    image_url = f"{base_url}/images/{dist_name}"
 
     with ApiClient(configuration) as api_client:
         line_bot_api = MessagingApi(api_client)
