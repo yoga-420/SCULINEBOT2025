@@ -173,7 +173,7 @@ def handle_image_message(event):
             ],
         }],
     )
-    
+    app.logger.info(response.output_text)
     with ApiClient(configuration) as api_client:
         line_bot_api = MessagingApi(api_client)
         line_bot_api.reply_message(
