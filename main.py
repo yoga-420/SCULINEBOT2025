@@ -43,7 +43,7 @@ GOOGLE_API_KEY = os.environ.get('GOOGLE_API_KEY')
 genai.configure(api_key=GOOGLE_API_KEY)
 model = genai.GenerativeModel('gemini-2.0-flash')
 
-static_tmp_path = "/tmp/static"
+static_tmp_path = "/tmp"
 os.makedirs(static_tmp_path, exist_ok=True)
 
 # API_URL = "https://api-inference.huggingface.co/models/mistralai/Mixtral-8x7B-Instruct-v0.1"
@@ -112,7 +112,7 @@ def handle_content_message(event):
     dist_path = tempfile_path + '.' + ext
     dist_name = os.path.basename(dist_path)
     os.rename(tempfile_path, dist_path)
-    print(dist_path)
+    uploaded_image = imgur_client.upload_image(dist_path, title="上傳測試")
 
     with ApiClient(configuration) as api_client:
         line_bot_api = MessagingApi(api_client)
@@ -121,7 +121,7 @@ def handle_content_message(event):
                 reply_token=event.reply_token,
                 messages=[
                     TextMessage(text='Save content.'),
-                    TextMessage(text=dist_path)
+                    TextMessage(text=uploaded_image)
                     # TextMessage(text=request.host_url + os.path.join('static', 'tmp', dist_name))
                 ]
             )
