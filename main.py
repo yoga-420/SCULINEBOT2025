@@ -97,24 +97,34 @@ def handle_message(event):
 
 @handler.add(MessageEvent, message=ImageMessageContent)
 def handle_image_message(event):
-    # 取得圖片內容
-    message_content = line_bot_api.get_message_content(event.message.id)
-    image_path = f"{event.message.id}.jpg"
-    with open(image_path, 'wb') as fd:
-        for chunk in message_content.iter_content():
-            fd.write(chunk)
-    
-    # 上傳至 Imgur
-    uploaded_image = imgur_client.upload_image(image_path, title="Uploaded with PyImgur")
-    image_url = uploaded_image.link
-
-    os.remove(image_path)
-
-    # 回傳圖片 URL 給使用者
-    line_bot_api.reply_message(
-        event.reply_token,
-        TextSendMessage(text=f"圖片已上傳至 Imgur：{imgur_url}")
-    )
+    with ApiClient(configuration) as api_client:
+        line_bot_api = MessagingApi(api_client)
+        # 取得圖片內容
+        message_content = line_bot_api.get_message_content(event.message.id)
+        # 儲存圖片至暫存檔案
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as tf:
+            for chunk in message_content.iter_content():
+                tf.write(chunk)
+            temp_file_path = tf.name
+        try:
+            # 上傳圖片至 Imgur
+            uploaded_image = imgur_client.upload_image(temp_file_path, title="Uploaded via LINE Bot")
+            image_url = uploaded_image.link
+            # 回傳圖片給使用者
+            line_bot_api.reply_message(
+                ReplyMessageRequest(
+                    reply_token=event.reply_token,
+                    messages=[
+                        ImageMessage(
+                            original_content_url=image_url,
+                            preview_image_url=image_url
+                        )
+                    ]
+                )
+            )
+        finally:
+            # 刪除暫存檔案
+            os.remove(temp_file_path)
 
 @app.route('/static/<path:path>')
 def send_static_content(path):
