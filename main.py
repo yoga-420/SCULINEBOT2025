@@ -160,26 +160,22 @@ def handle_image_message(event):
 
     # === 以下是處理解釋圖片部分 === #
     
-    response = client.chat.completions.create(
-        model="gpt-4o",
-        messages=[
-            {
-                "role": "user",
-                "content": [
-                    {"type": "text", "text": "請描述這張圖片"},
-                    {
-                        "type": "image_url",
-                        "image_url": {
-                            "url": image_url,
-                        }
-                    }
-                ]
-            }
-        ],
-        max_tokens=800
+    response = client.responses.create(
+        model="gpt-4o-mini",
+        input=[{
+            "role": "user",
+            "content": [
+                {"type": "input_text", "text": "圖裏面的是什麼東西？用繁體中文描述"},
+                {
+                    "type": "input_image",
+                    "image_url": image_url,
+                },
+            ],
+        }],
     )
+
     
-    app.logger.info(response.choices[0].message.content)
+    app.logger.info(response.output_text)
     with ApiClient(configuration) as api_client:
         line_bot_api = MessagingApi(api_client)
         line_bot_api.reply_message(
