@@ -1,7 +1,6 @@
 # 東吳大學資料系2025年LINEBOT
 
 from flask import Flask, request, abort, send_from_directory
-import pyimgur
 
 import markdown
 from bs4 import BeautifulSoup
@@ -36,16 +35,6 @@ import google.generativeai as genai
 # HF_TOKEN = os.environ.get('HF_TOKEN')
 # headers = {"Authorization": f"Bearer {HF_TOKEN}"}
 
-imgur_client_id = os.environ.get('IMGUR_CLIENT_ID')
-imgur_client = pyimgur.Imgur(imgur_client_id)
-
-## 下面一段是測試是否imgur會檔huggingface space，測試完可刪除
-
-uploaded_image = imgur_client.upload_image("/code/mi.png")
-app.logger.info(uploaded_image.link)
-
-##
-
 GOOGLE_API_KEY = os.environ.get('GOOGLE_API_KEY')
 genai.configure(api_key=GOOGLE_API_KEY)
 model = genai.GenerativeModel('gemini-2.0-flash')
@@ -60,6 +49,15 @@ def query(payload):
     return response.text
 
 app = Flask(__name__)
+
+### 將/tmp資料夾中的圖片建立成URL
+
+@app.route("/images/<filename>")
+def serve_image(filename):
+    return send_from_directory("/tmp", filename)
+
+base_url = os.getenv("SPACE_HOST")
+###
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 app.logger.setLevel(logging.INFO)
@@ -119,7 +117,8 @@ def handle_content_message(event):
     dist_path = tempfile_path + '.' + ext
     dist_name = os.path.basename(dist_path)
     os.rename(tempfile_path, dist_path)
-    uploaded_image = imgur_client.upload_image(dist_path)
+
+    image_url = f"{base_url}/images{dist_path}"
 
     with ApiClient(configuration) as api_client:
         line_bot_api = MessagingApi(api_client)
@@ -128,7 +127,7 @@ def handle_content_message(event):
                 reply_token=event.reply_token,
                 messages=[
                     TextMessage(text='Save content.'),
-                    TextMessage(text=uploaded_image.link)
+                    TextMessage(text=image_url)
                     # TextMessage(text=request.host_url + os.path.join('static', 'tmp', dist_name))
                 ]
             )
