@@ -5,4 +5,3 @@ markdown
 beautifulsoup4
 google-generativeai
 openai
-pyimgur
