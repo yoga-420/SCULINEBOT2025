@@ -30,7 +30,7 @@ from linebot.v3.webhooks import (
 import os
 import requests
 import logging
-
+import tempfile
 import google.generativeai as genai
 
 # HF_TOKEN = os.environ.get('HF_TOKEN')
