@@ -93,13 +93,13 @@ def handle_text_message(event):
         if user_input.startswith("AI "):
             prompt = user_input[3:].strip()
             try:
-                response = openai.Image.create(
-                    prompt=prompt,
+                response = client.images.generate(
                     model="dall-e-3",
-                    n=1,
+                    prompt=f"使用下面的文字來畫一幅畫：{prompt}",
                     size="1024x1024",
-                    response_format="url"
-                )
+                    quality="standard",
+                    n=1,
+                )                
                 image_url = response['data'][0]['url']
                 with ApiClient(configuration) as api_client:
                     line_bot_api = MessagingApi(api_client)
