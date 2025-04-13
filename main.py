@@ -57,7 +57,7 @@ handler = WebhookHandler(channel_secret)
 def home():
     return {"message": "Line Webhook Server"}
 
-@app.route("/callback", methods=['POST'])
+@app.route("/", methods=['POST'])
 def callback():
     # get X-Line-Signature header value
     signature = request.headers['X-Line-Signature']
