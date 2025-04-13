@@ -115,7 +115,7 @@ def handle_content_message(event):
         tf.write(content)
         filename = os.path.basename(tf.name)
 
-    image_url = f"{base_url}/images/{filename}"
+    image_url = f"https://{base_url}/images/{filename}"
     app.logger.info(image_url)
     with ApiClient(configuration) as api_client:
         line_bot_api = MessagingApi(api_client)
