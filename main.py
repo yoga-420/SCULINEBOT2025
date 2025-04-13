@@ -97,19 +97,9 @@ def handle_message(event):
             )
         )
 
-@handler.add(MessageEvent, message=(ImageMessageContent,
-                                    VideoMessageContent,
-                                    AudioMessageContent))
+@handler.add(MessageEvent, message=ImageMessageContent)
 def handle_content_message(event):
-    if isinstance(event.message, ImageMessageContent):
-        ext = 'jpg'
-    elif isinstance(event.message, VideoMessageContent):
-        ext = 'mp4'
-    elif isinstance(event.message, AudioMessageContent):
-        ext = 'm4a'
-    else:
-        return
-
+    ext = 'jpg'
     with ApiClient(configuration) as api_client:
         line_bot_blob_api = MessagingApiBlob(api_client)
         message_content = line_bot_blob_api.get_message_content(message_id=event.message.id)
