@@ -95,7 +95,7 @@ def handle_message(event):
             )
         )
 
-@handler.add(MessageEvent, message=ImageMessage)
+@handler.add(MessageEvent, message=ImageMessageContent)
 def handle_image_message(event):
     # 取得圖片內容
     message_content = line_bot_api.get_message_content(event.message.id)
