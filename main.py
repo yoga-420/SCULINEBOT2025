@@ -35,6 +35,7 @@ model = genai.GenerativeModel("gemini-2.0-flash")
 
 # === 初始化OpenAI模型 ===
 openai.api_key = os.getenv("OPENAI_API_KEY")
+client = OpenAI()
 
 
 # === 初始設定 ===
