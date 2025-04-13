@@ -42,6 +42,8 @@ GOOGLE_API_KEY = os.environ.get('GOOGLE_API_KEY')
 genai.configure(api_key=GOOGLE_API_KEY)
 model = genai.GenerativeModel('gemini-2.0-flash')
 
+static_tmp_path = os.path.join(os.path.dirname("."), 'static', 'tmp')
+
 # API_URL = "https://api-inference.huggingface.co/models/mistralai/Mixtral-8x7B-Instruct-v0.1"
 def query(payload):
     # response = requests.post(API_URL, headers=headers, json=payload)
@@ -95,36 +97,42 @@ def handle_message(event):
             )
         )
 
-@handler.add(MessageEvent, message=ImageMessageContent)
-def handle_image_message(event):
+@handler.add(MessageEvent, message=(ImageMessageContent,
+                                    VideoMessageContent,
+                                    AudioMessageContent))
+def handle_content_message(event):
+    if isinstance(event.message, ImageMessageContent):
+        ext = 'jpg'
+    elif isinstance(event.message, VideoMessageContent):
+        ext = 'mp4'
+    elif isinstance(event.message, AudioMessageContent):
+        ext = 'm4a'
+    else:
+        return
+
+    with ApiClient(configuration) as api_client:
+        line_bot_blob_api = MessagingApiBlob(api_client)
+        message_content = line_bot_blob_api.get_message_content(message_id=event.message.id)
+        with tempfile.NamedTemporaryFile(dir=static_tmp_path, prefix=ext + '-', delete=False) as tf:
+            tf.write(message_content)
+            tempfile_path = tf.name
+
+    dist_path = tempfile_path + '.' + ext
+    dist_name = os.path.basename(dist_path)
+    os.rename(tempfile_path, dist_path)
+
     with ApiClient(configuration) as api_client:
         line_bot_api = MessagingApi(api_client)
-        # 取得圖片內容
-        message_content = line_bot_api.get_message_content(event.message.id)
-        # 儲存圖片至暫存檔案
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as tf:
-            for chunk in message_content.iter_content():
-                tf.write(chunk)
-            temp_file_path = tf.name
-        try:
-            # 上傳圖片至 Imgur
-            uploaded_image = imgur_client.upload_image(temp_file_path, title="Uploaded via LINE Bot")
-            image_url = uploaded_image.link
-            # 回傳圖片給使用者
-            line_bot_api.reply_message(
-                ReplyMessageRequest(
-                    reply_token=event.reply_token,
-                    messages=[
-                        ImageMessage(
-                            original_content_url=image_url,
-                            preview_image_url=image_url
-                        )
-                    ]
-                )
+        line_bot_api.reply_message(
+            ReplyMessageRequest(
+                reply_token=event.reply_token,
+                messages=[
+                    TextMessage(text='Save content.'),
+                    TextMessage(text=request.host_url + os.path.join('static', 'tmp', dist_name))
+                ]
             )
-        finally:
-            # 刪除暫存檔案
-            os.remove(temp_file_path)
+        )
+
 
 @app.route('/static/<path:path>')
 def send_static_content(path):
