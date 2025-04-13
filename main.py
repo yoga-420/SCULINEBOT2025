@@ -184,7 +184,7 @@ def handle_image_message(event):
                         original_content_url=image_url,
                         preview_image_url=image_url
                     ),
-                    TextMessage(text=image_url),
+                    TextMessage(text=response.output_text),
                 ]
             )
         )
