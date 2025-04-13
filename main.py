@@ -143,6 +143,9 @@ def handle_text_message(event):
 # === 處理圖片訊息 ===
 @handler.add(MessageEvent, message=ImageMessageContent)
 def handle_image_message(event):
+    
+    # === 以下是處理圖片回傳部分 === #
+    
     ext = "jpg"
     with ApiClient(configuration) as api_client:
         blob_api = MessagingApiBlob(api_client)
@@ -155,6 +158,22 @@ def handle_image_message(event):
     image_url = f"https://{base_url}/images/{filename}"
     app.logger.info(f"Image URL: {image_url}")
 
+    # === 以下是處理解釋圖片部分 === #
+    
+    response = client.responses.create(
+        model="gpt-4o-mini",
+        input=[{
+            "role": "user",
+            "content": [
+                {"type": "input_text", "text": "這張圖裏面說的是什麼？請用繁體中文回答"},
+                {
+                    "type": "input_image",
+                    "image_url": image_url,
+                },
+            ],
+        }],
+    )
+    
     with ApiClient(configuration) as api_client:
         line_bot_api = MessagingApi(api_client)
         line_bot_api.reply_message(
@@ -164,7 +183,8 @@ def handle_image_message(event):
                     ImageMessage(
                         original_content_url=image_url,
                         preview_image_url=image_url
-                    )
+                    ),
+                    TextMessage(text=image_url),
                 ]
             )
         )
