@@ -125,18 +125,18 @@ def handle_text_message(event):
                         )
                     )
         else:
-        with ApiClient(configuration) as api_client:
-            line_bot_api = MessagingApi(api_client)
-            response = query(event.message.text)
-            html_msg = markdown.markdown(response)
-            soup = BeautifulSoup(html_msg, "html.parser")
+            with ApiClient(configuration) as api_client:
+                line_bot_api = MessagingApi(api_client)
+                response = query(event.message.text)
+                html_msg = markdown.markdown(response)
+                soup = BeautifulSoup(html_msg, "html.parser")
     
-            line_bot_api.reply_message_with_http_info(
-                ReplyMessageRequest(
-                    reply_token=event.reply_token,
-                    messages=[TextMessage(text=soup.get_text())]
+                line_bot_api.reply_message_with_http_info(
+                    ReplyMessageRequest(
+                        reply_token=event.reply_token,
+                        messages=[TextMessage(text=soup.get_text())]
+                    )
                 )
-            )
 
 # === 處理圖片訊息 ===
 @handler.add(MessageEvent, message=ImageMessageContent)
