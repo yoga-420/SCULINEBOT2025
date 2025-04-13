@@ -101,7 +101,7 @@ def handle_text_message(event):
                     quality="standard",
                     n=1,
                 )                
-                image_url = response['data'][0]['url']
+                image_url = response.data[0].url
                 app.logger.info(image_url)
                 with ApiClient(configuration) as api_client:
                     line_bot_api = MessagingApi(api_client)
