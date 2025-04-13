@@ -121,6 +121,7 @@ def handle_content_message(event):
                 reply_token=event.reply_token,
                 messages=[
                     TextMessage(text='Save content.'),
+                    TextMessage(text=dist_path)
                     # TextMessage(text=request.host_url + os.path.join('static', 'tmp', dist_name))
                 ]
             )
