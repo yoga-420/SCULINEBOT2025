@@ -9,6 +9,7 @@ import markdown
 from flask import Flask, request, abort, send_from_directory
 from bs4 import BeautifulSoup
 import google.generativeai as genai
+import openai
 
 from linebot.v3 import WebhookHandler
 from linebot.v3.exceptions import InvalidSignatureError
@@ -31,6 +32,10 @@ from linebot.v3.webhooks import (
 GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY")
 genai.configure(api_key=GOOGLE_API_KEY)
 model = genai.GenerativeModel("gemini-2.0-flash")
+
+# === 初始化OpenAI模型 ===
+openai.api_key = os.getenv("OPENAI_API_KEY")
+
 
 # === 初始設定 ===
 static_tmp_path = "/tmp"
@@ -84,18 +89,54 @@ def callback():
 # === 處理文字訊息 ===
 @handler.add(MessageEvent, message=TextMessageContent)
 def handle_text_message(event):
-    with ApiClient(configuration) as api_client:
-        line_bot_api = MessagingApi(api_client)
-        response = query(event.message.text)
-        html_msg = markdown.markdown(response)
-        soup = BeautifulSoup(html_msg, "html.parser")
-
-        line_bot_api.reply_message_with_http_info(
-            ReplyMessageRequest(
-                reply_token=event.reply_token,
-                messages=[TextMessage(text=soup.get_text())]
+        user_input = event.message.text.strip()
+        if user_input.startswith("AI "):
+            prompt = user_input[3:].strip()
+            try:
+                response = openai.Image.create(
+                    prompt=prompt,
+                    model="dall-e-3",
+                    n=1,
+                    size="1024x1024",
+                    response_format="url"
+                )
+                image_url = response['data'][0]['url']
+                with ApiClient(configuration) as api_client:
+                    line_bot_api = MessagingApi(api_client)
+                    line_bot_api.reply_message(
+                        ReplyMessageRequest(
+                            reply_token=event.reply_token,
+                            messages=[
+                                ImageMessage(
+                                    original_content_url=image_url,
+                                    preview_image_url=image_url
+                                )
+                            ]
+                        )
+                    )
+            except Exception as e:
+                app.logger.error(f"DALL·E 3 API error: {e}")
+                with ApiClient(configuration) as api_client:
+                    line_bot_api = MessagingApi(api_client)
+                    line_bot_api.reply_message(
+                        ReplyMessageRequest(
+                            reply_token=event.reply_token,
+                            messages=[TextMessage(text="抱歉，生成圖像時發生錯誤。")]
+                        )
+                    )
+        else:
+        with ApiClient(configuration) as api_client:
+            line_bot_api = MessagingApi(api_client)
+            response = query(event.message.text)
+            html_msg = markdown.markdown(response)
+            soup = BeautifulSoup(html_msg, "html.parser")
+    
+            line_bot_api.reply_message_with_http_info(
+                ReplyMessageRequest(
+                    reply_token=event.reply_token,
+                    messages=[TextMessage(text=soup.get_text())]
+                )
             )
-        )
 
 # === 處理圖片訊息 ===
 @handler.add(MessageEvent, message=ImageMessageContent)
