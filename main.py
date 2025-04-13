@@ -1,6 +1,7 @@
 # 東吳大學資料系2025年LINEBOT
 
-from flask import Flask, request, abort, send_from_directory, pyimgur
+from flask import Flask, request, abort, send_from_directory
+import pyimgur
 
 import markdown
 from bs4 import BeautifulSoup
