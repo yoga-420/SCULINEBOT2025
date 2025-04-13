@@ -9,7 +9,7 @@ import markdown
 from flask import Flask, request, abort, send_from_directory
 from bs4 import BeautifulSoup
 import google.generativeai as genai
-import openai
+from openai import OpenAI
 
 from linebot.v3 import WebhookHandler
 from linebot.v3.exceptions import InvalidSignatureError
