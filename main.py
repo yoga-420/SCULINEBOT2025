@@ -39,6 +39,11 @@ import google.generativeai as genai
 imgur_client_id = os.environ.get('IMGUR_CLIENT_ID')
 imgur_client = pyimgur.Imgur(imgur_client_id)
 
+# 下面一段是測試是否imgur會檔huggingface space，測試完可刪除
+uploaded_image = imgur_client.upload("/code/mi.png")
+app.logger.info(uploaded_image.link)
+
+
 GOOGLE_API_KEY = os.environ.get('GOOGLE_API_KEY')
 genai.configure(api_key=GOOGLE_API_KEY)
 model = genai.GenerativeModel('gemini-2.0-flash')
