@@ -1,6 +1,6 @@
 # 東吳大學資料系2025年LINEBOT
 
-from flask import Flask, request, abort, send_from_directory
+from flask import Flask, request, abort, send_from_directory, pyimgur
 
 import markdown
 from bs4 import BeautifulSoup
@@ -31,6 +31,9 @@ import google.generativeai as genai
 
 # HF_TOKEN = os.environ.get('HF_TOKEN')
 # headers = {"Authorization": f"Bearer {HF_TOKEN}"}
+
+imgur_client_id = os.environ.get('IMGUR_CLIENT_ID')
+imgur_client = pyimgur.Imgur(imgur_client_id)
 
 GOOGLE_API_KEY = os.environ.get('GOOGLE_API_KEY')
 genai.configure(api_key=GOOGLE_API_KEY)
