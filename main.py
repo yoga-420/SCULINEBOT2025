@@ -112,7 +112,7 @@ def handle_content_message(event):
     dist_path = tempfile_path + '.' + ext
     dist_name = os.path.basename(dist_path)
     os.rename(tempfile_path, dist_path)
-    uploaded_image = imgur_client.upload_image(dist_path, title="上傳測試")
+    uploaded_image = imgur_client.upload_image(dist_path)
 
     with ApiClient(configuration) as api_client:
         line_bot_api = MessagingApi(api_client)
@@ -121,7 +121,7 @@ def handle_content_message(event):
                 reply_token=event.reply_token,
                 messages=[
                     TextMessage(text='Save content.'),
-                    TextMessage(text=uploaded_image)
+                    TextMessage(text=uploaded_image.link)
                     # TextMessage(text=request.host_url + os.path.join('static', 'tmp', dist_name))
                 ]
             )
