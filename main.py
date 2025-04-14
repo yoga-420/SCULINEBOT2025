@@ -155,10 +155,10 @@ def handle_image_message(event):
         tf.write(content)
         filename = os.path.basename(tf.name)
 
-    # image_url = f"https://{base_url}/images/{filename}"
-    image_url = "https://upload.wikimedia.org/wikipedia/commons/thumb/d/dd/Gfp-wisconsin-madison-the-nature-boardwalk.jpg/2560px-Gfp-wisconsin-madison-the-nature-boardwalk.jpg"
+    image_url2 = f"https://{base_url}/images/{filename}"
+    # image_url = "https://upload.wikimedia.org/wikipedia/commons/thumb/d/dd/Gfp-wisconsin-madison-the-nature-boardwalk.jpg/2560px-Gfp-wisconsin-madison-the-nature-boardwalk.jpg"
 
-    app.logger.info(f"Image URL: {image_url}")
+    app.logger.info(f"Image URL: {image_url2}")
 
     # === 以下是處理解釋圖片部分 === #
     
@@ -170,7 +170,7 @@ def handle_image_message(event):
                 {"type": "input_text", "text": "圖裏面的是什麼東西？用繁體中文描述"},
                 {
                     "type": "input_image",
-                    "image_url": image_url,
+                    "image_url": image_url2,
                 },
             ],
         }],
