@@ -5,7 +5,6 @@ import tempfile
 import logging
 import requests
 import markdown
-import io
 
 from flask import Flask, request, abort, send_from_directory
 from bs4 import BeautifulSoup
@@ -28,8 +27,6 @@ from linebot.v3.webhooks import (
     TextMessageContent,
     ImageMessageContent
 )
-
-from PIL import Image
 
 # === 初始化 Google Gemini ===
 GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY")
@@ -153,17 +150,14 @@ def handle_image_message(event):
         blob_api = MessagingApiBlob(api_client)
         content = blob_api.get_message_content(message_id=event.message.id)
 
-    image = Image.open(io.BytesIO(content))
-    
     with tempfile.NamedTemporaryFile(dir=static_tmp_path, suffix=".jpg", delete=False) as tf:
-        # tf.write(content)
-        image.save(tf, format="JPEG")
+        tf.write(content)
         filename = os.path.basename(tf.name)
 
-    image_url2 = f"https://{base_url}/images/{filename}"
+    image_url = f"https://{base_url}/images/{filename}"
     # image_url = "https://upload.wikimedia.org/wikipedia/commons/thumb/d/dd/Gfp-wisconsin-madison-the-nature-boardwalk.jpg/2560px-Gfp-wisconsin-madison-the-nature-boardwalk.jpg"
 
-    app.logger.info(f"Image URL: {image_url2}")
+    app.logger.info(f"Image URL: {image_url}")
 
     # === 以下是處理解釋圖片部分 === #
     
@@ -172,10 +166,10 @@ def handle_image_message(event):
         input=[{
             "role": "user",
             "content": [
-                {"type": "input_text", "text": "圖裏面的是什麼東西？用繁體中文描述"},
+                {"type": "input_text", "text": "describe the image in traditional chinese"},
                 {
                     "type": "input_image",
-                    "image_url": image_url2,
+                    "image_url": image_url,
                 },
             ],
         }],
