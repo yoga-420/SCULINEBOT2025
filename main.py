@@ -1,4 +1,5 @@
 # ===東吳大學資料系 2025 年 LINEBOT === 
+import base64
 
 import io
 from PIL import Image
@@ -156,6 +157,13 @@ def handle_image_message(event):
     with ApiClient(configuration) as api_client:
         blob_api = MessagingApiBlob(api_client)
         content = blob_api.get_message_content(message_id=event.message.id)
+        image_bytes = content.data
+
+    # Step 2：轉成 base64 字串
+    base64_string = base64.b64encode(image_bytes).decode("utf-8")
+    
+    # Step 3：組成 OpenAI 的 data URI 格式
+    data_uri = f"data:image/png;base64,{base64_string}"
 
     # 使用 Pillow 讀取圖像
     image = Image.open(io.BytesIO(content))
@@ -173,7 +181,6 @@ def handle_image_message(event):
     app.logger.info(f"Image URL: {image_url}")
 
     # === 以下是處理解釋圖片部分 === #
-    '''
     response = client.responses.create(
         model="gpt-4o-mini",
         input=[{
@@ -182,13 +189,14 @@ def handle_image_message(event):
                 {"type": "input_text", "text": "describe the image in traditional chinese"},
                 {
                     "type": "input_image",
-                    "image_url": image_url,
+                    "image_url": data_uri,
                 },
             ],
         }],
     )
     app.logger.info(response.output_text)
-    '''
+    
+    # === 以下是回傳圖片部分 === #
     
     with ApiClient(configuration) as api_client:
         line_bot_api = MessagingApi(api_client)
