@@ -157,7 +157,7 @@ def handle_image_message(event):
     with ApiClient(configuration) as api_client:
         blob_api = MessagingApiBlob(api_client)
         content = blob_api.get_message_content(message_id=event.message.id)
-        image_bytes = content.data
+        image_bytes = content
 
     # Step 2：轉成 base64 字串
     base64_string = base64.b64encode(image_bytes).decode("utf-8")
