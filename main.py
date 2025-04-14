@@ -3,6 +3,8 @@
 import io
 from PIL import Image
 
+import pyimgur
+
 import os
 import tempfile
 import logging
@@ -31,6 +33,8 @@ from linebot.v3.webhooks import (
     ImageMessageContent
 )
 
+
+
 # === 初始化 Google Gemini ===
 GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY")
 genai.configure(api_key=GOOGLE_API_KEY)
@@ -50,6 +54,25 @@ base_url = os.getenv("SPACE_HOST")  # e.g., "your-space-name.hf.space"
 app = Flask(__name__)
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 app.logger.setLevel(logging.INFO)
+
+# === 初始化並測試pyimgur ===
+
+IMGUR_CLIENT_ID = os.environ.get("IMGUR_CLIENT_ID")
+im = pyimgur.Imgur(CLIENT_ID)
+test_image_url = "https://upload.wikimedia.org/wikipedia/commons/thumb/d/dd/Gfp-wisconsin-madison-the-nature-boardwalk.jpg/2560px-Gfp-wisconsin-madison-the-nature-boardwalk.jpg"
+
+try:
+  uploaded_image = im.upload_image(test_image_url, title="Uploaded with PyImgur")
+  app.logger.info(uploaded_image.title)
+  app.logger.info(uploaded_image.link)
+  app.logger.info(uploaded_image.type)
+  app.logger.info(uploaded_image.type)
+except FileNotFoundError:
+  app.logger.info("Error: test.png not found. Please ensure the image file exists in the current directory or provide the correct path.")
+except Exception as e:
+  app.logger.info(f"An error occurred: {e}")
+
+# === 測試結束 ===
 
 channel_secret = os.environ.get("YOUR_CHANNEL_SECRET")
 channel_access_token = os.environ.get("YOUR_CHANNEL_ACCESS_TOKEN")
