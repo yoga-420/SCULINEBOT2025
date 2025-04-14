@@ -161,8 +161,8 @@ def handle_image_message(event):
     # === 以下是處理解釋圖片部分 === #
     
     response = client.responses.create(
-        model="gpt-4o",
-        input=[{
+        model="gpt-4o-mini",
+        messages=[{
             "role": "user",
             "content": [
                 {"type": "input_text", "text": "圖裏面的是什麼東西？用繁體中文描述"},
