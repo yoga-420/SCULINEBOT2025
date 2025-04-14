@@ -1,5 +1,8 @@
 # ===東吳大學資料系 2025 年 LINEBOT === 
 
+import io
+from PIL import Image
+
 import os
 import tempfile
 import logging
@@ -152,8 +155,15 @@ def handle_image_message(event):
         blob_api = MessagingApiBlob(api_client)
         content = blob_api.get_message_content(message_id=event.message.id)
 
+    # 使用 Pillow 讀取圖像
+    image = Image.open(io.BytesIO(content))
+
+    # 將圖像轉換為灰階
+    gray_image = image.convert('L')
+    
     with tempfile.NamedTemporaryFile(dir=static_tmp_path, suffix=".jpg", delete=False) as tf:
-        tf.write(content)
+        # tf.write(content)
+        gray_image.save(tf, format="JPEG")
         filename = os.path.basename(tf.name)
 
     image_url = f"https://{base_url}/images/{filename}"
@@ -162,7 +172,7 @@ def handle_image_message(event):
     app.logger.info(f"Image URL: {image_url}")
 
     # === 以下是處理解釋圖片部分 === #
-    
+    '''
     response = client.responses.create(
         model="gpt-4o-mini",
         input=[{
@@ -176,9 +186,9 @@ def handle_image_message(event):
             ],
         }],
     )
-
-    
     app.logger.info(response.output_text)
+    '''
+    
     with ApiClient(configuration) as api_client:
         line_bot_api = MessagingApi(api_client)
         line_bot_api.reply_message(
@@ -187,9 +197,9 @@ def handle_image_message(event):
                 messages=[
                     ImageMessage(
                         original_content_url=image_url,
-                        preview_image_url=image_url
+                        # preview_image_url=image_url
                     ),
-                    TextMessage(text=response.output_text),
+                    # TextMessage(text=response.output_text),
                 ]
             )
         )
