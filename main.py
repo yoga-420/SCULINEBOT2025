@@ -2,8 +2,6 @@
 import base64
 
 import io
-from PIL import Image
-
 import os
 import tempfile
 import logging
@@ -165,15 +163,8 @@ def handle_image_message(event):
     # Step 3：組成 OpenAI 的 data URI 格式
     data_uri = f"data:image/png;base64,{base64_string}"
 
-    # 使用 Pillow 讀取圖像
-    image = Image.open(io.BytesIO(content))
-
-    # 將圖像轉換為灰階
-    gray_image = image.convert('L')
-    
     with tempfile.NamedTemporaryFile(dir=static_tmp_path, suffix=".jpg", delete=False) as tf:
-        # tf.write(content)
-        gray_image.save(tf, format="JPEG")
+        tf.write(content)
         filename = os.path.basename(tf.name)
 
     image_url = f"https://{base_url}/images/{filename}"
@@ -208,7 +199,7 @@ def handle_image_message(event):
                         original_content_url=image_url,
                         preview_image_url=image_url
                     ),
-                    # TextMessage(text=response.output_text),
+                    TextMessage(text=response.output_text),
                 ]
             )
         )
