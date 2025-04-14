@@ -64,9 +64,11 @@ def query(payload):
 def serve_image(filename):
     return send_from_directory(static_tmp_path, filename)
 
+'''
 @app.route("/static/<path:path>")
 def send_static_content(path):
     return send_from_directory("static", path)
+'''
 
 # === LINE Webhook 接收端點 ===
 @app.route("/")
