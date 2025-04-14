@@ -58,7 +58,7 @@ app.logger.setLevel(logging.INFO)
 # === 初始化並測試pyimgur ===
 
 IMGUR_CLIENT_ID = os.environ.get("IMGUR_CLIENT_ID")
-im = pyimgur.Imgur(CLIENT_ID)
+im = pyimgur.Imgur(IMGUR_CLIENT_ID)
 test_image_url = "https://upload.wikimedia.org/wikipedia/commons/thumb/d/dd/Gfp-wisconsin-madison-the-nature-boardwalk.jpg/2560px-Gfp-wisconsin-madison-the-nature-boardwalk.jpg"
 
 try:
