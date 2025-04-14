@@ -1,10 +1,11 @@
-# 東吳大學資料系 2025 年 LINEBOT
+# ===東吳大學資料系 2025 年 LINEBOT === 
 
 import os
 import tempfile
 import logging
 import requests
 import markdown
+import io
 
 from flask import Flask, request, abort, send_from_directory
 from bs4 import BeautifulSoup
@@ -27,6 +28,8 @@ from linebot.v3.webhooks import (
     TextMessageContent,
     ImageMessageContent
 )
+
+from PIL import Image
 
 # === 初始化 Google Gemini ===
 GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY")
@@ -146,13 +149,15 @@ def handle_image_message(event):
     
     # === 以下是處理圖片回傳部分 === #
     
-    ext = "jpg"
     with ApiClient(configuration) as api_client:
         blob_api = MessagingApiBlob(api_client)
         content = blob_api.get_message_content(message_id=event.message.id)
 
-    with tempfile.NamedTemporaryFile(dir=static_tmp_path, suffix=f".{ext}", delete=False) as tf:
-        tf.write(content)
+    image = Image.open(io.BytesIO(content))
+    
+    with tempfile.NamedTemporaryFile(dir=static_tmp_path, suffix=".jpg", delete=False) as tf:
+        # tf.write(content)
+        image.save(tf, format="JPEG")
         filename = os.path.basename(tf.name)
 
     image_url2 = f"https://{base_url}/images/{filename}"
