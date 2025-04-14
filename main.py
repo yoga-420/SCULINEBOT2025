@@ -155,14 +155,16 @@ def handle_image_message(event):
         tf.write(content)
         filename = os.path.basename(tf.name)
 
-    image_url = f"https://{base_url}/images/{filename}"
+    # image_url = f"https://{base_url}/images/{filename}"
+    image_url = "https://upload.wikimedia.org/wikipedia/commons/thumb/d/dd/Gfp-wisconsin-madison-the-nature-boardwalk.jpg/2560px-Gfp-wisconsin-madison-the-nature-boardwalk.jpg"
+
     app.logger.info(f"Image URL: {image_url}")
 
     # === 以下是處理解釋圖片部分 === #
     
     response = client.responses.create(
         model="gpt-4o-mini",
-        messages=[{
+        input=[{
             "role": "user",
             "content": [
                 {"type": "input_text", "text": "圖裏面的是什麼東西？用繁體中文描述"},
