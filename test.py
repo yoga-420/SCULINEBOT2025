@@ -1,5 +1,4 @@
 # ===東吳大學資料系 2025 年 LINEBOT ===
-import base64
 import logging
 import os
 import tempfile
@@ -23,16 +22,11 @@ from linebot.v3.messaging import (
     TextMessage,
 )
 from linebot.v3.webhooks import ImageMessageContent, MessageEvent, TextMessageContent
-from openai import OpenAI
 from PIL import Image
 
 # === 初始化 Google Gemini ===
 GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY")
 google_client = genai.Client(api_key=GOOGLE_API_KEY)
-
-# === 初始化OpenAI模型 ===
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-client = OpenAI(api_key=OPENAI_API_KEY)
 text_system_prompt = "你是一個中文的AI助手，請用繁體中文回答"
 
 # === 初始設定 ===
