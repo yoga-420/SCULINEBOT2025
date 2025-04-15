@@ -3,8 +3,12 @@ import base64
 import logging
 import os
 import tempfile
+from io import BytesIO
 
 from google import genai
+from google.genai import types
+from PIL import Image
+
 import markdown
 from bs4 import BeautifulSoup
 from flask import Flask, abort, request, send_from_directory
@@ -93,36 +97,47 @@ def handle_text_message(event):
     if user_input.startswith("AI "):
         prompt = user_input[3:].strip()
         try:
-            response = client.images.generate(
-                model="dall-e-3",
-                prompt=f"使用下面的文字來畫一幅畫：{prompt}",
-                size="1024x1024",
-                quality="standard",
-                n=1,
-            )
-            image_url = response.data[0].url
-            app.logger.info(image_url)
-            with ApiClient(configuration) as api_client:
-                line_bot_api = MessagingApi(api_client)
-                line_bot_api.reply_message(
-                    ReplyMessageRequest(
-                        reply_token=event.reply_token,
-                        messages=[
-                            ImageMessage(
-                                original_content_url=image_url,
-                                preview_image_url=image_url,
-                            )
-                        ],
-                    )
+            # 使用 Gemini 生成圖片
+            response = google_client.models.generate_content(
+                model="gemini-2.0-flash-exp-image-generation",
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    response_modalities=['TEXT', 'IMAGE']
                 )
+            )
+
+            # 處理回應中的圖片
+            for part in response.candidates[0].content.parts:
+                if part.inline_data is not None:
+                    image = Image.open(BytesIO(part.inline_data.data))
+                    filename = "output.png"
+                    image_path = os.path.join(static_tmp_path, filename)
+                    image.save(image_path)
+
+                    # 建立圖片的公開 URL
+                    image_url = f"https://{base_url}/images/{filename}"
+
+                    with ApiClient(configuration) as api_client:
+                        line_bot_api = MessagingApi(api_client)
+                        line_bot_api.reply_message(
+                            ReplyMessageRequest(
+                                reply_token=event.reply_token,
+                                messages=[
+                                    ImageMessage(
+                                        original_content_url=image_url,
+                                        preview_image_url=image_url,
+                                    )
+                                ],
+                            )
+                        )
         except Exception as e:
-            app.logger.error(f"DALL·E 3 API error: {e}")
+            app.logger.error(f"Gemini API error: {e}")
             with ApiClient(configuration) as api_client:
                 line_bot_api = MessagingApi(api_client)
                 line_bot_api.reply_message(
                     ReplyMessageRequest(
                         reply_token=event.reply_token,
-                        messages=[TextMessage(text="抱歉，生成圖像時發生錯誤。")],
+                        messages=[TextMessage(text="抱歉，生成圖片時發生錯誤。")],
                     )
                 )
     else:
@@ -138,7 +153,6 @@ def handle_text_message(event):
                     messages=[TextMessage(text=soup.get_text())],
                 )
             )
-
 
 # === 處理圖片訊息 ===
 @handler.add(MessageEvent, message=ImageMessageContent)
