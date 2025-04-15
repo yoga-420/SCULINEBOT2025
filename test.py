@@ -4,6 +4,7 @@ import logging
 import os
 import tempfile
 from io import BytesIO
+import uuid
 
 from google import genai
 from google.genai import types
@@ -110,13 +111,15 @@ def handle_text_message(event):
             for part in response.candidates[0].content.parts:
                 if part.inline_data is not None:
                     image = Image.open(BytesIO(part.inline_data.data))
-                    filename = "output.png"
+                    filename = f"{uuid.uuid4().hex}.png"
                     image_path = os.path.join(static_tmp_path, filename)
                     image.save(image_path)
 
                     # 建立圖片的公開 URL
                     image_url = f"https://{base_url}/images/{filename}"
-
+                    app.logger.info(f"Image URL: {image_url}")
+                    
+                    # 回傳圖片給 LINE 使用者
                     with ApiClient(configuration) as api_client:
                         line_bot_api = MessagingApi(api_client)
                         line_bot_api.reply_message(
