@@ -4,9 +4,7 @@ import logging
 import os
 import tempfile
 
-# import google.generativeai as genai
-
-from google import genai
+import google.generativeai as genai
 import markdown
 from bs4 import BeautifulSoup
 from flask import Flask, abort, request, send_from_directory
@@ -26,10 +24,8 @@ from openai import OpenAI
 
 # === 初始化 Google Gemini ===
 GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY")
-client = genai.Client(api_key=GOOGLE_API_KEY)
-
-# genai.configure(api_key=GOOGLE_API_KEY)
-# model = genai.GenerativeModel("gemini-2.0-flash")
+genai.configure(api_key=GOOGLE_API_KEY)
+model = genai.GenerativeModel("gemini-2.0-flash")
 
 # === 初始化OpenAI模型 ===
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
@@ -57,10 +53,7 @@ handler = WebhookHandler(channel_secret)
 
 # === AI Query 包裝 ===
 def query(payload):
-    response = client.models.generate_content(
-    model="gemini-2.0-flash",
-    contents=[payload]
-    )
+    response = model.generate_content(payload)
     return response.text
 
 
