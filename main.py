@@ -163,7 +163,7 @@ def handle_image_message(event):
 
     # === 以下是處理解釋圖片部分 === #
     response = client.responses.create(
-        model="gpt-4o-mini",
+        model="gpt-4.1-nano",
         input=[{
             "role": "user",
             "content": [
