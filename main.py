@@ -59,7 +59,7 @@ handler = WebhookHandler(channel_secret)
 def query(payload):
     response = client.models.generate_content(
     model="gemini-2.0-flash",
-    contents=payload
+    contents=[payload]
     )
     return response.text
 
