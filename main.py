@@ -4,7 +4,6 @@ import logging
 import os
 import tempfile
 
-import google.generativeai as genai
 import markdown
 from bs4 import BeautifulSoup
 from flask import Flask, abort, request, send_from_directory
@@ -21,11 +20,6 @@ from linebot.v3.messaging import (
 )
 from linebot.v3.webhooks import ImageMessageContent, MessageEvent, TextMessageContent
 from openai import OpenAI
-
-# === 初始化 Google Gemini ===
-GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY")
-genai.configure(api_key=GOOGLE_API_KEY)
-model = genai.GenerativeModel("gemini-2.0-flash")
 
 # === 初始化OpenAI模型 ===
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
