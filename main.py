@@ -39,7 +39,8 @@ client = OpenAI(api_key=api_key)
 
 
 # === 初始設定 ===
-static_tmp_path = "/tmp"
+# static_tmp_path = "/tmp"
+static_tmp_path = tempfile.gettempdir()
 os.makedirs(static_tmp_path, exist_ok=True)
 base_url = os.getenv("SPACE_HOST")  # e.g., "your-space-name.hf.space"
 
