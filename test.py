@@ -126,7 +126,7 @@ def handle_text_message(event):
                                 ],
                             )
                         )
-                    # 傳送圖片後刪除暫存檔案
+                    
         except Exception as e:
             app.logger.error(f"Gemini API error: {e}")
             with ApiClient(configuration) as api_client:
