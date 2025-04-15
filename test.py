@@ -133,9 +133,6 @@ def handle_text_message(event):
                             )
                         )
                     # 傳送圖片後刪除暫存檔案
-                    if os.path.exists(image_path):
-                        os.remove(image_path)
-
         except Exception as e:
             app.logger.error(f"Gemini API error: {e}")
             with ApiClient(configuration) as api_client:
