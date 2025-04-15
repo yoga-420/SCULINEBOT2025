@@ -4,5 +4,5 @@ line-bot-sdk
 markdown
 beautifulsoup4
 # google-generativeai
-google-genai
+google-genai>=1.10.0
 openai
