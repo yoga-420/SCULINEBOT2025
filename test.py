@@ -183,7 +183,7 @@ def handle_image_message(event):
         model="gemini-2.0-flash",
         contents=[image, "用繁體中文描述這張圖片"],
     )
-    app.logger.info(response.output_text)
+    app.logger.info(response.text)
 
     # === 以下是回傳圖片部分 === #
 
