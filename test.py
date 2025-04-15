@@ -3,16 +3,14 @@ import base64
 import logging
 import os
 import tempfile
-from io import BytesIO
 import uuid
-
-from google import genai
-from google.genai import types
-from PIL import Image
+from io import BytesIO
 
 import markdown
 from bs4 import BeautifulSoup
 from flask import Flask, abort, request, send_from_directory
+from google import genai
+from google.genai import types
 from linebot.v3 import WebhookHandler
 from linebot.v3.exceptions import InvalidSignatureError
 from linebot.v3.messaging import (
@@ -26,6 +24,7 @@ from linebot.v3.messaging import (
 )
 from linebot.v3.webhooks import ImageMessageContent, MessageEvent, TextMessageContent
 from openai import OpenAI
+from PIL import Image
 
 # === 初始化 Google Gemini ===
 GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY")
@@ -58,8 +57,8 @@ handler = WebhookHandler(channel_secret)
 # === AI Query 包裝 ===
 def query(payload):
     response = google_client.models.generate_content(
-    model="gemini-2.0-flash", 
-    contents=f"{text_system_prompt}：{payload}",
+        model="gemini-2.0-flash",
+        contents=f"{text_system_prompt}：{payload}",
     )
     return response.text
 
@@ -103,8 +102,8 @@ def handle_text_message(event):
                 model="gemini-2.0-flash-exp-image-generation",
                 contents=prompt,
                 config=types.GenerateContentConfig(
-                    response_modalities=['TEXT', 'IMAGE']
-                )
+                    response_modalities=["TEXT", "IMAGE"]
+                ),
             )
 
             # 處理回應中的圖片
@@ -118,7 +117,7 @@ def handle_text_message(event):
                     # 建立圖片的公開 URL
                     image_url = f"https://{base_url}/images/{filename}"
                     app.logger.info(f"Image URL: {image_url}")
-                    
+
                     # 回傳圖片給 LINE 使用者
                     with ApiClient(configuration) as api_client:
                         line_bot_api = MessagingApi(api_client)
@@ -133,6 +132,10 @@ def handle_text_message(event):
                                 ],
                             )
                         )
+                    # 傳送圖片後刪除暫存檔案
+                    if os.path.exists(image_path):
+                        os.remove(image_path)
+
         except Exception as e:
             app.logger.error(f"Gemini API error: {e}")
             with ApiClient(configuration) as api_client:
@@ -156,6 +159,7 @@ def handle_text_message(event):
                     messages=[TextMessage(text=soup.get_text())],
                 )
             )
+
 
 # === 處理圖片訊息 ===
 @handler.add(MessageEvent, message=ImageMessageContent)
