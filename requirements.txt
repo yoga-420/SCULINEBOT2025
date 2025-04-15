@@ -3,5 +3,6 @@ gunicorn
 line-bot-sdk
 markdown
 beautifulsoup4
-google-generativeai
+# google-generativeai
+google-genai
 openai
