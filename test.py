@@ -161,6 +161,48 @@ def handle_text_message(event):
 # === 處理圖片訊息 ===
 @handler.add(MessageEvent, message=ImageMessageContent)
 def handle_image_message(event):
+    # === 以下是處理圖片回傳部分 === #
+    with ApiClient(configuration) as api_client:
+        blob_api = MessagingApiBlob(api_client)
+        content = blob_api.get_message_content(message_id=event.message.id)
+
+    # Step 4：將圖片存到本地端
+    with tempfile.NamedTemporaryFile(
+        dir=static_tmp_path, suffix=".jpg", delete=False
+    ) as tf:
+        tf.write(content)
+        filename = os.path.basename(tf.name)
+
+    image_url = f"https://{base_url}/images/{filename}"
+
+    app.logger.info(f"Image URL: {image_url}")
+
+    # === 以下是解釋圖片 === #
+    image = Image.open(tf.name)
+    response = google_client.models.generate_content(
+        model="gemini-2.0-flash",
+        contents=[image, "用繁體中文描述這張圖片"],
+    )
+    app.logger.info(response.output_text)
+
+    # === 以下是回傳圖片部分 === #
+
+    with ApiClient(configuration) as api_client:
+        line_bot_api = MessagingApi(api_client)
+        line_bot_api.reply_message(
+            ReplyMessageRequest(
+                reply_token=event.reply_token,
+                messages=[
+                    ImageMessage(
+                        original_content_url=image_url, preview_image_url=image_url
+                    ),
+                    TextMessage(text=response.text),
+                ],
+            )
+        )
+'''
+@handler.add(MessageEvent, message=ImageMessageContent)
+def handle_image_message(event):
 
     # === 以下是處理圖片回傳部分 === #
 
@@ -223,3 +265,4 @@ def handle_image_message(event):
                 ],
             )
         )
+'''
