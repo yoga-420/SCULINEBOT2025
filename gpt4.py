@@ -19,7 +19,7 @@ from linebot.v3.messaging import (
     TextMessage,
 )
 from linebot.v3.webhooks import ImageMessageContent, MessageEvent, TextMessageContent
-from openai import OpenAI
+from gpt4 import OpenAI
 
 # === 初始化OpenAI模型 ===
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
