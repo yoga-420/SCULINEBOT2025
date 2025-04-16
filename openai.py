@@ -26,6 +26,12 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 client = OpenAI(api_key=OPENAI_API_KEY)
 text_system_prompt = "你是一個中文的AI助手，請用繁體中文回答"
 
+# === 先建立第一個對話，之後可以延續這個對話 ===
+init_response = client.responses.create(
+    model="gpt-4o-mini",
+    input=[{"role": "system", "content": text_system_prompt}],
+)
+
 
 # === 初始設定 ===
 static_tmp_path = tempfile.gettempdir()
@@ -49,8 +55,9 @@ handler = WebhookHandler(channel_secret)
 # === AI Query 包裝 ===
 def query(payload):
     response = client.responses.create(
-        model="gpt-4.1",
-        input=f"{text_system_prompt}：{payload}",
+        model="gpt-4o-mini",
+        previous_response_id=init_response.id,
+        input=[{"role": "user", "content": f"{payload}"}],
     )
     return response.output_text
 

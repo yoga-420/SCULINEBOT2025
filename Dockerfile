@@ -8,4 +8,4 @@ RUN pip install --no-cache-dir --upgrade -r /code/requirements.txt
 
 COPY . .
 
-CMD ["gunicorn","-b", "0.0.0.0:7860", "gemini:app"]
+CMD ["gunicorn","-b", "0.0.0.0:7860", "openai:app"]
