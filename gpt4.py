@@ -32,6 +32,7 @@ response = client.responses.create(
     input=[{"role": "system", "content": text_system_prompt}],
 )
 
+message_id = response.id
 
 # === 初始設定 ===
 static_tmp_path = tempfile.gettempdir()
@@ -53,13 +54,13 @@ handler = WebhookHandler(channel_secret)
 
 
 # === AI Query 包裝 ===
-def query(payload):
+def query(payload, previous_response_id):
     second_response = client.responses.create(
         model="gpt-4o-mini",
-        previous_response_id=response.id,
+        previous_response_id=previous_response_id,
         input=[{"role": "user", "content": f"{payload}"}],
     )
-    return second_response.output_text
+    return second_response
 
 
 # === 靜態圖檔路由 ===
@@ -92,6 +93,7 @@ def callback():
 # === 處理文字訊息 ===
 @handler.add(MessageEvent, message=TextMessageContent)
 def handle_text_message(event):
+    global message_id
     user_input = event.message.text.strip()
     if user_input.startswith("AI "):
         prompt = user_input[3:].strip()
@@ -131,8 +133,9 @@ def handle_text_message(event):
     else:
         with ApiClient(configuration) as api_client:
             line_bot_api = MessagingApi(api_client)
-            response = query(event.message.text)
-            html_msg = markdown.markdown(response)
+            response = query(event.message.text, previous_response_id=message_id)
+            message_id = response.id
+            html_msg = markdown.markdown(response.out_text)
             soup = BeautifulSoup(html_msg, "html.parser")
 
             line_bot_api.reply_message_with_http_info(
