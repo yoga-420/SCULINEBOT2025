@@ -28,6 +28,10 @@ from PIL import Image
 GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY")
 google_client = genai.Client(api_key=GOOGLE_API_KEY)
 text_system_prompt = "你是一個中文的AI助手，請用繁體中文回答"
+chat = google_client.chats.create(
+    model="gemini-2.0-flash",
+    system_prompt=text_system_prompt,
+)
 
 # === 初始設定 ===
 static_tmp_path = tempfile.gettempdir()
@@ -50,10 +54,7 @@ handler = WebhookHandler(channel_secret)
 
 # === AI Query 包裝 ===
 def query(payload):
-    response = google_client.models.generate_content(
-        model="gemini-2.0-flash",
-        contents=f"{text_system_prompt}：{payload}",
-    )
+    response = chat.send_message(payload)
     return response.text
 
 
