@@ -30,7 +30,12 @@ google_client = genai.Client(api_key=GOOGLE_API_KEY)
 text_system_prompt = "你是一個中文的AI助手，請用繁體中文回答"
 chat = google_client.chats.create(
     model="gemini-2.0-flash",
-    system_prompt=text_system_prompt,
+    messages=[
+        {
+            "role": "system",
+            "parts": [text_system_prompt]
+        }
+    ]
 )
 
 # === 初始設定 ===
