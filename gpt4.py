@@ -135,7 +135,7 @@ def handle_text_message(event):
             line_bot_api = MessagingApi(api_client)
             response = query(event.message.text, previous_response_id=message_id)
             message_id = response.id
-            html_msg = markdown.markdown(response.out_text)
+            html_msg = markdown.markdown(response.output_text)
             soup = BeautifulSoup(html_msg, "html.parser")
 
             line_bot_api.reply_message_with_http_info(
