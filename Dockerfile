@@ -14,4 +14,4 @@ USER appuser
 
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 CMD curl -f http://0.0.0.0:7860/ || exit 1
 
-CMD ["gunicorn","-b", "0.0.0.0:7860", "gpt4:app"]
+CMD ["gunicorn","-b", "0.0.0.0:7860", "gemini:app"]
