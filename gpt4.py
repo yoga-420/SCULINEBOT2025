@@ -100,7 +100,7 @@ def handle_text_message(event):
         try:
             response = client.images.generate(
                 model="dall-e-3",
-                prompt=f"使用下面的文字來畫一幅畫，使用吉卜力風格：{prompt}",
+                prompt=f"使用下面的文字來畫一幅畫：{prompt}",
                 size="1024x1024",
                 quality="standard",
                 n=1,
