@@ -99,8 +99,7 @@ def handle_text_message(event):
         prompt = user_input[3:].strip()
         try:
             response = client.images.generate(
-                # model="dall-e-3",
-                model="gpt-4o",
+                model="dall-e-3",
                 prompt=f"使用下面的文字來畫一幅畫，使用吉卜力風格：{prompt}",
                 size="1024x1024",
                 quality="standard",
