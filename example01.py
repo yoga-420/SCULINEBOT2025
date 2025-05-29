@@ -32,6 +32,7 @@ from linebot.v3.webhooks import (
 
 from PIL import Image
 from linebot.v3.webhooks import VideoMessageContent
+import requests
 
 # === 初始化 Google Gemini ===
 GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY")
@@ -42,9 +43,9 @@ google_search_tool = Tool(
 )
 
 chat = client.chats.create(
-    model="gemini-2.0-flash",
+    model="gemini-2.5-pro-preview-05-06",
     config=GenerateContentConfig(
-        system_instruction="你是一個中文的AI助手，請用繁體中文回答",
+        system_instruction="你是一個中文的AI助手，關於所有問題，請用繁體中文文言文回答",
         tools=[google_search_tool],
         response_modalities=["TEXT"],
     )
@@ -252,8 +253,10 @@ def handle_video_message(event):
 
     # 影片說明
     try:
-        from io import BytesIO
-        video_bytes = BytesIO(video_data)
+        video_response = requests.get(video_url)
+        video_response.raise_for_status()
+        video_data = video_response.content
+
         response = client.models.generate_content(
             model="gemini-2.5-flash-preview-05-20",
             config=types.GenerateContentConfig(
@@ -261,9 +264,12 @@ def handle_video_message(event):
                 response_modalities=["TEXT"],
                 tools=[google_search_tool],
             ),
-            contents=[video_bytes, "用繁體中文描述這段影片"],
+            contents=[{"mime_type": "video/mp4", "data": video_data}, "用繁體中文描述這段影片"],
         )
         description = response.text
+    except Exception as e:
+        app.logger.error(f"Gemini API error (video): {e}")
+        description = "抱歉，無法解釋這段影片內容。"
     except Exception as e:
         app.logger.error(f"Gemini API error (video): {e}")
         description = "抱歉，無法解釋這段影片內容。"
