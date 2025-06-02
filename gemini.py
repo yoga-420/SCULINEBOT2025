@@ -160,21 +160,49 @@ def handle_text_message(event):
     else:
         with ApiClient(configuration) as api_client:
             line_bot_api = MessagingApi(api_client)
-            # 一開始先詢問三個旅遊規劃基本問題
-            intro_msg = (
-                "您好！我是您的旅遊規劃小助手。\n"
-                "請問：\n"
-                "1. 想去的旅遊地點？\n"
-                "2. 預算金額？\n"
-                "3. 旅遊人數？\n"
-                "請一次告訴我這三個資訊，讓我幫您規劃行程！"
-            )
-            line_bot_api.reply_message(
-                ReplyMessageRequest(
-                    reply_token=event.reply_token,
-                    messages=[TextMessage(text=intro_msg)],
+            # 嘗試判斷是否包含三項資訊（地點、金額、人數）
+            # 這裡用簡單的關鍵字判斷，實際可根據需求調整
+            if (
+                ("地點" in user_input or "去" in user_input)
+                and ("元" in user_input or "錢" in user_input or "費用" in user_input or "預算" in user_input)
+                and ("人" in user_input or "位" in user_input)
+            ):
+                # 已包含三項資訊，進行旅遊規劃
+                prompt = (
+                    f"以下是使用者提供的旅遊資訊：\n{user_input}\n"
+                    "請根據這些資訊，規劃一份詳細的旅遊建議與行程。"
                 )
-            )
+                try:
+                    response = query(prompt)
+                    if not response:
+                        response = "抱歉，目前無法取得旅遊建議，請稍後再試。"
+                except Exception as e:
+                    app.logger.error(f"Gemini API error (text): {e}")
+                    response = "抱歉，旅遊規劃服務暫時無法使用。"
+                html_msg = markdown.markdown(response)
+                soup = BeautifulSoup(html_msg, "html.parser")
+                line_bot_api.reply_message(
+                    ReplyMessageRequest(
+                        reply_token=event.reply_token,
+                        messages=[TextMessage(text=soup.get_text())],
+                    )
+                )
+            else:
+                # 尚未提供三項資訊，繼續詢問
+                intro_msg = (
+                    "您好！我是您的旅遊規劃小助手。\n"
+                    "請問：\n"
+                    "1. 想去的旅遊地點？\n"
+                    "2. 預算金額？\n"
+                    "3. 旅遊人數？\n"
+                    "請一次告訴我這三個資訊，讓我幫您規劃行程！"
+                )
+                line_bot_api.reply_message(
+                    ReplyMessageRequest(
+                        reply_token=event.reply_token,
+                        messages=[TextMessage(text=intro_msg)],
+                    )
+                )
             # 若要等使用者回覆後再進行規劃，可在收到完整資訊後再呼叫 Gemini
             # 若要立即進行規劃，請根據 user_input 判斷是否包含三項資訊再呼叫 query
 
