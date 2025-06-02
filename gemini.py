@@ -86,7 +86,7 @@ def serve_image(filename):
 # === LINE Webhook 接收端點 ===
 @app.route("/")
 def home():
-    return {"message": "Line Webhook Server"}
+    return "Line Webhook Server"  # 修正回傳格式
 
 
 @app.route("/", methods=["POST"])
@@ -108,7 +108,6 @@ def callback():
 @handler.add(MessageEvent, message=TextMessageContent)
 def handle_text_message(event):
     user_input = event.message.text.strip()
-    # 針對 AI 生成圖片功能可保留，若只專注旅遊可移除
     if user_input.startswith("AI "):
         prompt = user_input[3:].strip()
         try:
@@ -166,11 +165,18 @@ def handle_text_message(event):
                 f"請協助我規劃旅遊：{user_input}\n"
                 "請主動詢問我旅遊相關需求（如地點、天數、預算、興趣），並給予專業建議。"
             )
-            response = query(prompt)
+            try:
+                response = query(prompt)
+                if not response:
+                    response = "抱歉，目前無法取得旅遊建議，請稍後再試。"
+            except Exception as e:
+                app.logger.error(f"Gemini API error (text): {e}")
+                response = "抱歉，旅遊規劃服務暫時無法使用。"
             html_msg = markdown.markdown(response)
             soup = BeautifulSoup(html_msg, "html.parser")
 
-            line_bot_api.reply_message_with_http_info(
+            # 修正為 reply_message
+            line_bot_api.reply_message(
                 ReplyMessageRequest(
                     reply_token=event.reply_token,
                     messages=[TextMessage(text=soup.get_text())],
