@@ -160,28 +160,23 @@ def handle_text_message(event):
     else:
         with ApiClient(configuration) as api_client:
             line_bot_api = MessagingApi(api_client)
-            # 針對旅遊主題包裝 prompt，強化旅遊規劃導向
-            prompt = (
-                f"請協助我規劃旅遊：{user_input}\n"
-                "請主動詢問我旅遊相關需求（如地點、天數、預算、興趣），並給予專業建議。"
+            # 一開始先詢問三個旅遊規劃基本問題
+            intro_msg = (
+                "您好！我是您的旅遊規劃小助手。\n"
+                "請問：\n"
+                "1. 想去的旅遊地點？\n"
+                "2. 預算金額？\n"
+                "3. 旅遊人數？\n"
+                "請一次告訴我這三個資訊，讓我幫您規劃行程！"
             )
-            try:
-                response = query(prompt)
-                if not response:
-                    response = "抱歉，目前無法取得旅遊建議，請稍後再試。"
-            except Exception as e:
-                app.logger.error(f"Gemini API error (text): {e}")
-                response = "抱歉，旅遊規劃服務暫時無法使用。"
-            html_msg = markdown.markdown(response)
-            soup = BeautifulSoup(html_msg, "html.parser")
-
-            # 修正為 reply_message
             line_bot_api.reply_message(
                 ReplyMessageRequest(
                     reply_token=event.reply_token,
-                    messages=[TextMessage(text=soup.get_text())],
+                    messages=[TextMessage(text=intro_msg)],
                 )
             )
+            # 若要等使用者回覆後再進行規劃，可在收到完整資訊後再呼叫 Gemini
+            # 若要立即進行規劃，請根據 user_input 判斷是否包含三項資訊再呼叫 query
 
 
 # === 處理圖片訊息 ===
