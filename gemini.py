@@ -44,7 +44,8 @@ google_search_tool = Tool(
 chat = client.chats.create(
     model="gemini-2.0-flash",
     config=GenerateContentConfig(
-        system_instruction="你是一個中文的AI助手，請用繁體中文回答",
+        # 修改為旅遊規劃專家
+        system_instruction="你是一個專門規劃旅遊的AI助手，請用繁體中文根據使用者需求，提供旅遊建議、行程規劃、景點推薦、交通與住宿建議等，並主動詢問使用者旅遊地點、天數、預算、興趣等資訊以協助規劃。",
         tools=[google_search_tool],
         response_modalities=["TEXT"],
     )
@@ -107,6 +108,7 @@ def callback():
 @handler.add(MessageEvent, message=TextMessageContent)
 def handle_text_message(event):
     user_input = event.message.text.strip()
+    # 針對 AI 生成圖片功能可保留，若只專注旅遊可移除
     if user_input.startswith("AI "):
         prompt = user_input[3:].strip()
         try:
@@ -159,7 +161,12 @@ def handle_text_message(event):
     else:
         with ApiClient(configuration) as api_client:
             line_bot_api = MessagingApi(api_client)
-            response = query(event.message.text)
+            # 針對旅遊主題包裝 prompt，強化旅遊規劃導向
+            prompt = (
+                f"請協助我規劃旅遊：{user_input}\n"
+                "請主動詢問我旅遊相關需求（如地點、天數、預算、興趣），並給予專業建議。"
+            )
+            response = query(prompt)
             html_msg = markdown.markdown(response)
             soup = BeautifulSoup(html_msg, "html.parser")
 
