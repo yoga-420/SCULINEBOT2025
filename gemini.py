@@ -109,6 +109,23 @@ def callback():
 @handler.add(MessageEvent, message=TextMessageContent)
 def handle_text_message(event):
     user_input = event.message.text.strip()
+    if user_input == "新增規劃":
+        with ApiClient(configuration) as api_client:
+            line_bot_api = MessagingApi(api_client)
+            plan_msg = (
+                "請告訴我以下資訊:\n"
+                "1.旅遊國家地點:\n"
+                "2.日期:\n"
+                "3.人數:\n"
+                "4.旅行預算:"
+            )
+            line_bot_api.reply_message(
+                ReplyMessageRequest(
+                    reply_token=event.reply_token,
+                    messages=[TextMessage(text=plan_msg)],
+                )
+            )
+        return
     if user_input.startswith("AI "):
         prompt = user_input[3:].strip()
         try:
@@ -191,7 +208,7 @@ def handle_text_message(event):
             else:
                 # 尚未提供四項資訊，繼續詢問
                 intro_msg = (
-                    "您好！我是您的旅遊規劃小助手。\n"
+                    "您好！我是您的旅遊小管家小花。\n"
                     "請問：\n"
                     "1. 想去的旅遊地點？\n"
                     "2. 預算金額？\n"
@@ -325,7 +342,7 @@ def handle_follow(event):
     with ApiClient(configuration) as api_client:
         line_bot_api = MessagingApi(api_client)
         intro_msg = (
-            "您好！我是您的旅遊規劃小助手。\n"
+            "您好！我是您的旅遊小管家小花。\n"
             "請問：\n"
             "1. 想去的旅遊地點？\n"
             "2. 預算金額？\n"
