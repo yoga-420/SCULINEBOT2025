@@ -25,6 +25,7 @@ from linebot.v3.messaging import (
     TextMessage,
 )
 from linebot.v3.webhooks import (
+    FollowEvent,
     ImageMessageContent,
     MessageEvent,
     TextMessageContent,
@@ -160,14 +161,14 @@ def handle_text_message(event):
     else:
         with ApiClient(configuration) as api_client:
             line_bot_api = MessagingApi(api_client)
-            # 嘗試判斷是否包含三項資訊（地點、金額、人數）
-            # 這裡用簡單的關鍵字判斷，實際可根據需求調整
+            # 判斷是否包含地點、金額、天數、人數
             if (
                 ("地點" in user_input or "去" in user_input)
                 and ("元" in user_input or "錢" in user_input or "費用" in user_input or "預算" in user_input)
                 and ("人" in user_input or "位" in user_input)
+                and ("天" in user_input or "日" in user_input)
             ):
-                # 已包含三項資訊，進行旅遊規劃
+                # 已包含四項資訊，進行旅遊規劃
                 prompt = (
                     f"以下是使用者提供的旅遊資訊：\n{user_input}\n"
                     "請根據這些資訊，規劃一份詳細的旅遊建議與行程。"
@@ -188,14 +189,15 @@ def handle_text_message(event):
                     )
                 )
             else:
-                # 尚未提供三項資訊，繼續詢問
+                # 尚未提供四項資訊，繼續詢問
                 intro_msg = (
                     "您好！我是您的旅遊規劃小助手。\n"
                     "請問：\n"
                     "1. 想去的旅遊地點？\n"
                     "2. 預算金額？\n"
-                    "3. 旅遊人數？\n"
-                    "請一次告訴我這三個資訊，讓我幫您規劃行程！"
+                    "3. 旅遊天數？\n"
+                    "4. 旅遊人數？\n"
+                    "請一次告訴我這四個資訊，讓我幫您規劃行程！"
                 )
                 line_bot_api.reply_message(
                     ReplyMessageRequest(
@@ -204,7 +206,7 @@ def handle_text_message(event):
                     )
                 )
             # 若要等使用者回覆後再進行規劃，可在收到完整資訊後再呼叫 Gemini
-            # 若要立即進行規劃，請根據 user_input 判斷是否包含三項資訊再呼叫 query
+            # 若要立即進行規劃，請根據 user_input 判斷是否包含四項資訊再呼叫 query
 
 
 # === 處理圖片訊息 ===
@@ -314,5 +316,26 @@ def handle_video_message(event):
                     TextMessage(text=f"影片連結：{video_url}"),
                     TextMessage(text=description),
                 ],
+            )
+        )
+
+# === 處理使用者加入聊天室（加好友/進入聊天室）===
+@handler.add(FollowEvent)
+def handle_follow(event):
+    with ApiClient(configuration) as api_client:
+        line_bot_api = MessagingApi(api_client)
+        intro_msg = (
+            "您好！我是您的旅遊規劃小助手。\n"
+            "請問：\n"
+            "1. 想去的旅遊地點？\n"
+            "2. 預算金額？\n"
+            "3. 旅遊天數？\n"
+            "4. 旅遊人數？\n"
+            "請一次告訴我這四個資訊，讓我幫您規劃行程！"
+        )
+        line_bot_api.reply_message(
+            ReplyMessageRequest(
+                reply_token=event.reply_token,
+                messages=[TextMessage(text=intro_msg)],
             )
         )
