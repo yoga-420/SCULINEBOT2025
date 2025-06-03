@@ -134,6 +134,46 @@ def handle_text_message(event):
             )
         return
 
+    if user_input == "我要瀏覽歷史紀錄":
+        with ApiClient(configuration) as api_client:
+            line_bot_api = MessagingApi(api_client)
+            ask_msg = (
+                "請輸入您想查詢的國家地點或關鍵字，例如：\n"
+                "查詢歷史 日本\n"
+                "查詢歷史 義大利"
+            )
+            line_bot_api.reply_message(
+                ReplyMessageRequest(
+                    reply_token=event.reply_token,
+                    messages=[TextMessage(text=ask_msg)],
+                )
+            )
+        return
+
+    if user_input.startswith("查詢歷史"):
+        keyword = user_input.replace("查詢歷史", "", 1).strip()
+        with ApiClient(configuration) as api_client:
+            line_bot_api = MessagingApi(api_client)
+            if user_id and user_id in user_history and user_history[user_id]:
+                if keyword:
+                    filtered = [place for place in user_history[user_id] if keyword in place]
+                    if filtered:
+                        history_list = "\n".join(f"{idx+1}. {place}" for idx, place in enumerate(filtered))
+                        msg = f"查詢「{keyword}」的歷史紀錄：\n{history_list}"
+                    else:
+                        msg = f"沒有查詢過包含「{keyword}」的國家地點。"
+                else:
+                    msg = "請輸入要查詢的國家地點或關鍵字，例如：查詢歷史 日本"
+            else:
+                msg = "您尚未查詢過任何國家地點。"
+            line_bot_api.reply_message(
+                ReplyMessageRequest(
+                    reply_token=event.reply_token,
+                    messages=[TextMessage(text=msg)],
+                )
+            )
+        return
+
     if user_input == "歷史紀錄":
         with ApiClient(configuration) as api_client:
             line_bot_api = MessagingApi(api_client)
