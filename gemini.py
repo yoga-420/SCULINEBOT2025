@@ -151,92 +151,133 @@ def handle_text_message(event):
         return
 
     # 查詢旅遊規劃
-    else:
+    if (
+        ("地點" in user_input or "去" in user_input)
+        and ("元" in user_input or "錢" in user_input or "費用" in user_input or "預算" in user_input)
+        and ("人" in user_input or "位" in user_input)
+        and ("天" in user_input or "日" in user_input)
+    ):
         with ApiClient(configuration) as api_client:
             line_bot_api = MessagingApi(api_client)
-            if (
-                ("地點" in user_input or "去" in user_input)
-                and ("元" in user_input or "錢" in user_input or "費用" in user_input or "預算" in user_input)
-                and ("人" in user_input or "位" in user_input)
-                and ("天" in user_input or "日" in user_input)
-            ):
-                # 擷取地點資訊
-                place = None
-                if user_id:
-                    import re
-                    match = re.search(r"(?:地點|國家|去)([：: ]*)([\u4e00-\u9fa5A-Za-z0-9 ]+)", user_input)
-                    if match:
-                        place = match.group(2).strip()
-                # 已包含四項資訊，進行旅遊規劃
-                prompt = (
-                    f"以下是使用者提供的旅遊資訊：\n{user_input}\n"
-                    "請根據這些資訊，規劃一份詳細的旅遊建議與行程。"
+            # 擷取地點資訊
+            place = None
+            if user_id:
+                import re
+                match = re.search(r"(?:地點|國家|去)([：: ]*)([\u4e00-\u9fa5A-Za-z0-9 ]+)", user_input)
+                if match:
+                    place = match.group(2).strip()
+            prompt = (
+                f"以下是使用者提供的旅遊資訊：\n{user_input}\n"
+                "請根據這些資訊，規劃一份詳細的旅遊建議與行程。"
+            )
+            try:
+                response = query(prompt)
+                if not response:
+                    response = "抱歉，目前無法取得旅遊建議，請稍後再試。"
+            except Exception as e:
+                app.logger.error(f"Gemini API error (text): {e}")
+                response = "抱歉，旅遊規劃服務暫時無法使用。"
+            html_msg = markdown.markdown(response)
+            soup = BeautifulSoup(html_msg, "html.parser")
+            reply_text = soup.get_text()
+            # 存入歷史（地點, 建議）
+            if user_id and place:
+                if user_id not in user_history:
+                    user_history[user_id] = []
+                exists = any(p == place for p, _ in user_history[user_id])
+                if not exists:
+                    user_history[user_id].append((place, reply_text))
+            line_bot_api.reply_message(
+                ReplyMessageRequest(
+                    reply_token=event.reply_token,
+                    messages=[TextMessage(text=reply_text)],
                 )
-                try:
-                    response = query(prompt)
-                    if not response:
-                        response = "抱歉，目前無法取得旅遊建議，請稍後再試。"
-                except Exception as e:
-                    app.logger.error(f"Gemini API error (text): {e}")
-                    response = "抱歉，旅遊規劃服務暫時無法使用。"
-                html_msg = markdown.markdown(response)
-                soup = BeautifulSoup(html_msg, "html.parser")
-                reply_text = soup.get_text()
-                # 存入歷史（地點, 建議）
-                if user_id and place:
-                    if user_id not in user_history:
-                        user_history[user_id] = []
-                    # 避免重複地點
-                    exists = any(p == place for p, _ in user_history[user_id])
-                    if not exists:
-                        user_history[user_id].append((place, reply_text))
+            )
+        return
+
+    # 查詢歷史關鍵字
+    if user_input.startswith("查詢歷史"):
+        with ApiClient(configuration) as api_client:
+            line_bot_api = MessagingApi(api_client)
+            keyword = user_input[len("查詢歷史"):].strip()
+            if not keyword:
+                msg = "請提供要查詢的關鍵字或地點。"
+            else:
+                filtered = [
+                    (place, advice) for place, advice in user_history.get(user_id, [])
+                    if keyword in place or keyword in advice
+                ]
+                if filtered:
+                    history_list = "\n\n".join(
+                        f"{idx+1}. {place}\n建議：{advice}"
+                        for idx, (place, advice) in enumerate(filtered)
+                    )
+                    msg = f"查詢「{keyword}」的歷史紀錄：\n{history_list}"
+                else:
+                    msg = f"沒有查詢過包含「{keyword}」的國家地點或建議。"
+            line_bot_api.reply_message(
+                ReplyMessageRequest(
+                    reply_token=event.reply_token,
+                    messages=[TextMessage(text=msg)],
+                )
+            )
+        return
+
+    if user_input == "歷史紀錄":
+        with ApiClient(configuration) as api_client:
+            line_bot_api = MessagingApi(api_client)
+            if user_id in user_history and user_history[user_id]:
+                history_list = "\n\n".join(
+                    f"{idx+1}. {place}\n建議：{advice}"
+                    for idx, (place, advice) in enumerate(user_history[user_id])
+                )
+                msg = f"您的歷史紀錄：\n{history_list}"
+            else:
+                msg = "您尚未查詢過任何旅遊資訊。"
+            line_bot_api.reply_message(
+                ReplyMessageRequest(
+                    reply_token=event.reply_token,
+                    messages=[TextMessage(text=msg)],
+                )
+            )
+        return
+
+    # 直接輸入國家地點或關鍵字時查詢歷史
+    if user_id and user_id in user_history and user_history[user_id]:
+        known_cmds = ["我要新增規劃", "我要瀏覽歷史紀錄", "歷史紀錄"]
+        if (
+            user_input not in known_cmds
+            and not user_input.startswith("AI ")
+            and not user_input.startswith("查詢歷史")
+        ):
+            filtered = [(place, advice) for place, advice in user_history[user_id] if user_input in place or user_input in advice]
+            with ApiClient(configuration) as api_client:
+                line_bot_api = MessagingApi(api_client)
+                if filtered:
+                    history_list = "\n\n".join(
+                        f"{idx+1}. {place}\n建議：{advice}"
+                        for idx, (place, advice) in enumerate(filtered)
+                    )
+                    msg = f"查詢「{user_input}」的歷史紀錄：\n{history_list}"
+                else:
+                    msg = f"沒有查詢過包含「{user_input}」的國家地點或建議。"
                 line_bot_api.reply_message(
                     ReplyMessageRequest(
                         reply_token=event.reply_token,
-                        messages=[TextMessage(text=reply_text)],
+                        messages=[TextMessage(text=msg)],
                     )
                 )
-            else:
-                # 判斷是否包含地點、金額、天數、人數
-                if (
-                    ("地點" in user_input or "去" in user_input)
-                    and ("元" in user_input or "錢" in user_input or "費用" in user_input or "預算" in user_input)
-                    and ("人" in user_input or "位" in user_input)
-                    and ("天" in user_input or "日" in user_input)
-                ):
-                    # 擷取地點資訊並存入歷史
-                    if user_id:
-                        import re
-                        # 嘗試擷取「地點」或「國家」關鍵字後的內容
-                        match = re.search(r"(?:地點|國家|去)([：: ]*)([\u4e00-\u9fa5A-Za-z0-9 ]+)", user_input)
-                        if match:
-                            place = match.group(2).strip()
-                            if user_id not in user_history:
-                                user_history[user_id] = []
-                            if place and place not in user_history[user_id]:
-                                user_history[user_id].append(place)
+            return
 
-                    # 已包含四項資訊，進行旅遊規劃
-                    prompt = (
-                        f"以下是使用者提供的旅遊資訊：\n{user_input}\n"
-                        "請根據這些資訊，規劃一份詳細的旅遊建議與行程。"
-                    )
-                    try:
-                        response = query(prompt)
-                        if not response:
-                            response = "抱歉，目前無法取得旅遊建議，請稍後再試。"
-                    except Exception as e:
-                        app.logger.error(f"Gemini API error (text): {e}")
-                        response = "抱歉，旅遊規劃服務暫時無法使用。"
-                    html_msg = markdown.markdown(response)
-                    soup = BeautifulSoup(html_msg, "html.parser")
-                    line_bot_api.reply_message(
-                        ReplyMessageRequest(
-                            reply_token=event.reply_token,
-                            messages=[TextMessage(text=soup.get_text())],
-                        )
-                    )
-                pass
+    # 若無任何條件符合，給予預設回應，避免無回應
+    with ApiClient(configuration) as api_client:
+        line_bot_api = MessagingApi(api_client)
+        line_bot_api.reply_message(
+            ReplyMessageRequest(
+                reply_token=event.reply_token,
+                messages=[TextMessage(text="請輸入正確的指令或資訊，或點選功能按鈕。")],
+            )
+        )
 
 
 # === 處理圖片訊息 ===
