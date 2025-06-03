@@ -242,24 +242,46 @@ def handle_text_message(event):
                     )
                 )
             else:
-                # 尚未提供四項資訊，繼續詢問
-                intro_msg = (
-                    "您好！我是您的旅遊小管家小花。\n"
-                    "請問：\n"
-                    "1. 想去的旅遊地點？\n"
-                    "2. 預算金額？\n"
-                    "3. 旅遊天數？\n"
-                    "4. 旅遊人數？\n"
-                    "請一次告訴我這四個資訊，讓我幫您規劃行程！"
-                )
-                line_bot_api.reply_message(
-                    ReplyMessageRequest(
-                        reply_token=event.reply_token,
-                        messages=[TextMessage(text=intro_msg)],
+                # 判斷是否包含地點、金額、天數、人數
+                if (
+                    ("地點" in user_input or "去" in user_input)
+                    and ("元" in user_input or "錢" in user_input or "費用" in user_input or "預算" in user_input)
+                    and ("人" in user_input or "位" in user_input)
+                    and ("天" in user_input or "日" in user_input)
+                ):
+                    # 擷取地點資訊並存入歷史
+                    if user_id:
+                        import re
+                        # 嘗試擷取「地點」或「國家」關鍵字後的內容
+                        match = re.search(r"(?:地點|國家|去)([：: ]*)([\u4e00-\u9fa5A-Za-z0-9 ]+)", user_input)
+                        if match:
+                            place = match.group(2).strip()
+                            if user_id not in user_history:
+                                user_history[user_id] = []
+                            if place and place not in user_history[user_id]:
+                                user_history[user_id].append(place)
+
+                    # 已包含四項資訊，進行旅遊規劃
+                    prompt = (
+                        f"以下是使用者提供的旅遊資訊：\n{user_input}\n"
+                        "請根據這些資訊，規劃一份詳細的旅遊建議與行程。"
                     )
-                )
-            # 若要等使用者回覆後再進行規劃，可在收到完整資訊後再呼叫 Gemini
-            # 若要立即進行規劃，請根據 user_input 判斷是否包含四項資訊再呼叫 query
+                    try:
+                        response = query(prompt)
+                        if not response:
+                            response = "抱歉，目前無法取得旅遊建議，請稍後再試。"
+                    except Exception as e:
+                        app.logger.error(f"Gemini API error (text): {e}")
+                        response = "抱歉，旅遊規劃服務暫時無法使用。"
+                    html_msg = markdown.markdown(response)
+                    soup = BeautifulSoup(html_msg, "html.parser")
+                    line_bot_api.reply_message(
+                        ReplyMessageRequest(
+                            reply_token=event.reply_token,
+                            messages=[TextMessage(text=soup.get_text())],
+                        )
+                    )
+                pass
 
 
 # === 處理圖片訊息 ===
