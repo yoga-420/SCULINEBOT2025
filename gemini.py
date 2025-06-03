@@ -154,9 +154,11 @@ def handle_text_message(event):
         keyword = user_input.replace("查詢歷史", "", 1).strip()
         with ApiClient(configuration) as api_client:
             line_bot_api = MessagingApi(api_client)
-            if user_id and user_id in user_history and user_history[user_id]:
+            # 修正：user_id 取得方式與 user_history 結構
+            history = user_history.get(user_id, [])
+            if history:
                 if keyword:
-                    filtered = [place for place in user_history[user_id] if keyword in place]
+                    filtered = [place for place in history if keyword in place]
                     if filtered:
                         history_list = "\n".join(f"{idx+1}. {place}" for idx, place in enumerate(filtered))
                         msg = f"查詢「{keyword}」的歷史紀錄：\n{history_list}"
