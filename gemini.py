@@ -105,7 +105,7 @@ def callback():
     return "OK"
 
 
-# 新增：用戶歷史查詢記錄（僅記憶於記憶體，重啟會消失）
+# 用戶歷史查詢記錄（user_id: List[Tuple[地點, 建議]]）
 user_history = {}
 
 
@@ -150,144 +150,23 @@ def handle_text_message(event):
             )
         return
 
-    # 新增：直接輸入國家地點或關鍵字時查詢歷史
-    if user_id and user_id in user_history and user_history[user_id]:
-        # 避免和其他指令衝突，排除已知指令
-        known_cmds = ["我要新增規劃", "我要瀏覽歷史紀錄", "歷史紀錄"]
-        if (
-            user_input not in known_cmds
-            and not user_input.startswith("AI ")
-            and not user_input.startswith("查詢歷史")
-        ):
-            filtered = [place for place in user_history[user_id] if user_input in place]
-            with ApiClient(configuration) as api_client:
-                line_bot_api = MessagingApi(api_client)
-                if filtered:
-                    history_list = "\n".join(f"{idx+1}. {place}" for idx, place in enumerate(filtered))
-                    msg = f"查詢「{user_input}」的歷史紀錄：\n{history_list}"
-                else:
-                    msg = f"沒有查詢過包含「{user_input}」的國家地點。"
-                line_bot_api.reply_message(
-                    ReplyMessageRequest(
-                        reply_token=event.reply_token,
-                        messages=[TextMessage(text=msg)],
-                    )
-                )
-            return
-
-    if user_input.startswith("查詢歷史"):
-        keyword = user_input.replace("查詢歷史", "", 1).strip()
-        with ApiClient(configuration) as api_client:
-            line_bot_api = MessagingApi(api_client)
-            # 修正：user_id 取得方式與 user_history 結構
-            history = user_history.get(user_id, [])
-            if history:
-                if keyword:
-                    filtered = [place for place in history if keyword in place]
-                    if filtered:
-                        history_list = "\n".join(f"{idx+1}. {place}" for idx, place in enumerate(filtered))
-                        msg = f"查詢「{keyword}」的歷史紀錄：\n{history_list}"
-                    else:
-                        msg = f"沒有查詢過包含「{keyword}」的國家地點。"
-                else:
-                    msg = "請輸入要查詢的國家地點或關鍵字，例如：查詢歷史 日本"
-            else:
-                msg = "您尚未查詢過任何國家地點。"
-            line_bot_api.reply_message(
-                ReplyMessageRequest(
-                    reply_token=event.reply_token,
-                    messages=[TextMessage(text=msg)],
-                )
-            )
-        return
-
-    if user_input == "歷史紀錄":
-        with ApiClient(configuration) as api_client:
-            line_bot_api = MessagingApi(api_client)
-            if user_id and user_id in user_history and user_history[user_id]:
-                history_list = "\n".join(f"{idx+1}. {place}" for idx, place in enumerate(user_history[user_id]))
-                msg = f"您查詢過的國家地點：\n{history_list}"
-            else:
-                msg = "您尚未查詢過任何國家地點。"
-            line_bot_api.reply_message(
-                ReplyMessageRequest(
-                    reply_token=event.reply_token,
-                    messages=[TextMessage(text=msg)],
-                )
-            )
-        return
-
-    if user_input.startswith("AI "):
-        prompt = user_input[3:].strip()
-        try:
-            # 使用 Gemini 生成圖片
-            response = client.models.generate_content(
-                model="gemini-2.0-flash-exp-image-generation",
-                contents=prompt,
-                config=types.GenerateContentConfig(
-                    response_modalities=["TEXT", "IMAGE"]
-                ),
-            )
-
-            # 處理回應中的圖片
-            for part in response.candidates[0].content.parts:
-                if part.inline_data is not None:
-                    image = Image.open(BytesIO(part.inline_data.data))
-                    filename = f"{uuid.uuid4().hex}.png"
-                    image_path = os.path.join(static_tmp_path, filename)
-                    image.save(image_path)
-
-                    # 建立圖片的公開 URL
-                    image_url = f"https://{base_url}/images/{filename}"
-                    app.logger.info(f"Image URL: {image_url}")
-
-                    # 回傳圖片給 LINE 使用者
-                    with ApiClient(configuration) as api_client:
-                        line_bot_api = MessagingApi(api_client)
-                        line_bot_api.reply_message(
-                            ReplyMessageRequest(
-                                reply_token=event.reply_token,
-                                messages=[
-                                    ImageMessage(
-                                        original_content_url=image_url,
-                                        preview_image_url=image_url,
-                                    )
-                                ],
-                            )
-                        )
-
-        except Exception as e:
-            app.logger.error(f"Gemini API error: {e}")
-            with ApiClient(configuration) as api_client:
-                line_bot_api = MessagingApi(api_client)
-                line_bot_api.reply_message(
-                    ReplyMessageRequest(
-                        reply_token=event.reply_token,
-                        messages=[TextMessage(text="抱歉，生成圖片時發生錯誤。")],
-                    )
-                )
+    # 查詢旅遊規劃
     else:
         with ApiClient(configuration) as api_client:
             line_bot_api = MessagingApi(api_client)
-            # 判斷是否包含地點、金額、天數、人數
             if (
                 ("地點" in user_input or "去" in user_input)
                 and ("元" in user_input or "錢" in user_input or "費用" in user_input or "預算" in user_input)
                 and ("人" in user_input or "位" in user_input)
                 and ("天" in user_input or "日" in user_input)
             ):
-                # 擷取地點資訊並存入歷史
+                # 擷取地點資訊
+                place = None
                 if user_id:
                     import re
-                    # 嘗試擷取「地點」或「國家」關鍵字後的內容
                     match = re.search(r"(?:地點|國家|去)([：: ]*)([\u4e00-\u9fa5A-Za-z0-9 ]+)", user_input)
                     if match:
                         place = match.group(2).strip()
-                        if user_id not in user_history:
-                            user_history[user_id] = []
-                        if place and place not in user_history[user_id]:
-                            user_history[user_id].append(place)
-
                 # 已包含四項資訊，進行旅遊規劃
                 prompt = (
                     f"以下是使用者提供的旅遊資訊：\n{user_input}\n"
@@ -302,10 +181,19 @@ def handle_text_message(event):
                     response = "抱歉，旅遊規劃服務暫時無法使用。"
                 html_msg = markdown.markdown(response)
                 soup = BeautifulSoup(html_msg, "html.parser")
+                reply_text = soup.get_text()
+                # 存入歷史（地點, 建議）
+                if user_id and place:
+                    if user_id not in user_history:
+                        user_history[user_id] = []
+                    # 避免重複地點
+                    exists = any(p == place for p, _ in user_history[user_id])
+                    if not exists:
+                        user_history[user_id].append((place, reply_text))
                 line_bot_api.reply_message(
                     ReplyMessageRequest(
                         reply_token=event.reply_token,
-                        messages=[TextMessage(text=soup.get_text())],
+                        messages=[TextMessage(text=reply_text)],
                     )
                 )
             else:
