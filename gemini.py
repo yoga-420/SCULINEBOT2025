@@ -123,7 +123,7 @@ def handle_text_message(event):
                 "1.旅遊國家地點:\n"
                 "2.日期:\n"
                 "3.人數:\n"
-                "4.旅行預算:"
+                "4.旅行預算:\n"
                 "請幫我複製第1~4點的內容來回覆問題!\n"
             )
             line_bot_api.reply_message(
