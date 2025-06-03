@@ -150,7 +150,7 @@ def handle_text_message(event):
             )
         return
 
-    # 使用者直接輸入國家或關鍵字查詢歷史紀錄
+    # 使用者直接輸入國家或關鍵字查詢歷史紀錄（不需特殊指令）
     if user_id and user_id in user_history and user_history[user_id]:
         known_cmds = ["我要新增規劃", "我要瀏覽歷史紀錄", "歷史紀錄"]
         if (
