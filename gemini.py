@@ -124,7 +124,7 @@ def handle_text_message(event):
                 "2.日期:\n"
                 "3.人數:\n"
                 "4.旅行預算:\n"
-                "請幫我複製第1~4點的內容來回覆問題!\n"
+                "請幫我複製第1~4點的內容來回覆問題!"
             )
             line_bot_api.reply_message(
                 ReplyMessageRequest(
