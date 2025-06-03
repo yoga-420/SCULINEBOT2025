@@ -124,7 +124,6 @@ def handle_text_message(event):
                 "2.日期:\n"
                 "3.人數:\n"
                 "4.旅行預算:\n"
-                "請幫我複製第1~4點的內容來回覆問題!"
             )
             line_bot_api.reply_message(
                 ReplyMessageRequest(
@@ -138,9 +137,9 @@ def handle_text_message(event):
         with ApiClient(configuration) as api_client:
             line_bot_api = MessagingApi(api_client)
             ask_msg = (
-                "請輸入您想查詢的國家地點或關鍵字:\n"
+                "請輸入您想查詢的資訊:\n"
                 "國家地點: \n"
-                "關鍵字: \n"
+                "關鍵字: "
             )
             line_bot_api.reply_message(
                 ReplyMessageRequest(
