@@ -108,12 +108,80 @@ def callback():
 # 用戶歷史查詢記錄（user_id: List[Tuple[地點, 建議]]）
 user_history = {}
 
+# 新增：用戶搜尋模式狀態（user_id: bool）
+user_search_mode = {}
+
 
 # === 處理文字訊息 ===
 @handler.add(MessageEvent, message=TextMessageContent)
 def handle_text_message(event):
     user_input = event.message.text.strip()
     user_id = event.source.user_id if hasattr(event.source, "user_id") else None
+
+    # 進入歷史紀錄搜尋模式
+    if user_input == "我要瀏覽歷史紀錄":
+        if user_id:
+            user_search_mode[user_id] = True
+        with ApiClient(configuration) as api_client:
+            line_bot_api = MessagingApi(api_client)
+            ask_msg = (
+                "請直接輸入您想查詢的國家地點或關鍵字（多次查詢皆可），\n"
+                "若要結束搜尋，請輸入：結束搜尋"
+            )
+            line_bot_api.reply_message(
+                ReplyMessageRequest(
+                    reply_token=event.reply_token,
+                    messages=[TextMessage(text=ask_msg)],
+                )
+            )
+        return
+
+    # 結束歷史紀錄搜尋模式
+    if user_input == "結束搜尋":
+        if user_id and user_id in user_search_mode:
+            user_search_mode[user_id] = False
+        with ApiClient(configuration) as api_client:
+            line_bot_api = MessagingApi(api_client)
+            msg = "已結束歷史紀錄查詢，請繼續使用其他功能。"
+            line_bot_api.reply_message(
+                ReplyMessageRequest(
+                    reply_token=event.reply_token,
+                    messages=[TextMessage(text=msg)],
+                )
+            )
+        return
+
+    # 搜尋模式下，所有輸入都視為關鍵字查詢
+    if user_id and user_search_mode.get(user_id, False):
+        if user_id in user_history and user_history[user_id]:
+            filtered = [(place, advice) for place, advice in user_history[user_id] if user_input in place or user_input in advice]
+            with ApiClient(configuration) as api_client:
+                line_bot_api = MessagingApi(api_client)
+                if filtered:
+                    history_list = "\n\n".join(
+                        f"{idx+1}. {place}\n建議：{advice}"
+                        for idx, (place, advice) in enumerate(filtered)
+                    )
+                    msg = f"查詢「{user_input}」的歷史紀錄：\n{history_list}"
+                else:
+                    msg = f"沒有查詢過包含「{user_input}」的國家地點或建議。"
+                line_bot_api.reply_message(
+                    ReplyMessageRequest(
+                        reply_token=event.reply_token,
+                        messages=[TextMessage(text=msg)],
+                    )
+                )
+        else:
+            with ApiClient(configuration) as api_client:
+                line_bot_api = MessagingApi(api_client)
+                msg = "您尚未查詢過任何旅遊資訊。"
+                line_bot_api.reply_message(
+                    ReplyMessageRequest(
+                        reply_token=event.reply_token,
+                        messages=[TextMessage(text=msg)],
+                    )
+                )
+        return
 
     if user_input == "我要新增規劃":
         with ApiClient(configuration) as api_client:
@@ -129,23 +197,6 @@ def handle_text_message(event):
                 ReplyMessageRequest(
                     reply_token=event.reply_token,
                     messages=[TextMessage(text=plan_msg)],
-                )
-            )
-        return
-
-    if user_input == "我要瀏覽歷史紀錄":
-        with ApiClient(configuration) as api_client:
-            line_bot_api = MessagingApi(api_client)
-            ask_msg = (
-                "請直接輸入您想查詢的國家地點或關鍵字，例如：\n"
-                "日本\n"
-                "義大利\n"
-                "或直接輸入部分關鍵字。"
-            )
-            line_bot_api.reply_message(
-                ReplyMessageRequest(
-                    reply_token=event.reply_token,
-                    messages=[TextMessage(text=ask_msg)],
                 )
             )
         return
