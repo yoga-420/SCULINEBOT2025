@@ -137,7 +137,7 @@ def handle_text_message(event):
         with ApiClient(configuration) as api_client:
             line_bot_api = MessagingApi(api_client)
             ask_msg = (
-                "請輸入您想查詢的國家地點或關鍵字，例如：\n"
+                "請直接輸入您想查詢的國家地點或關鍵字，例如：\n"
                 "日本\n"
                 "義大利\n"
                 "或直接輸入部分關鍵字。"
@@ -149,6 +149,34 @@ def handle_text_message(event):
                 )
             )
         return
+
+    # 使用者直接輸入國家或關鍵字查詢歷史紀錄
+    if user_id and user_id in user_history and user_history[user_id]:
+        known_cmds = ["我要新增規劃", "我要瀏覽歷史紀錄", "歷史紀錄"]
+        if (
+            user_input not in known_cmds
+            and not user_input.startswith("AI ")
+            and not user_input.startswith("查詢歷史")
+            and not user_input.startswith("請輸入您想查詢的資訊")
+        ):
+            filtered = [(place, advice) for place, advice in user_history[user_id] if user_input in place or user_input in advice]
+            with ApiClient(configuration) as api_client:
+                line_bot_api = MessagingApi(api_client)
+                if filtered:
+                    history_list = "\n\n".join(
+                        f"{idx+1}. {place}\n建議：{advice}"
+                        for idx, (place, advice) in enumerate(filtered)
+                    )
+                    msg = f"查詢「{user_input}」的歷史紀錄：\n{history_list}"
+                else:
+                    msg = f"沒有查詢過包含「{user_input}」的國家地點或建議。"
+                line_bot_api.reply_message(
+                    ReplyMessageRequest(
+                        reply_token=event.reply_token,
+                        messages=[TextMessage(text=msg)],
+                    )
+                )
+            return
 
     # 查詢旅遊規劃
     if (
