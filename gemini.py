@@ -138,9 +138,9 @@ def handle_text_message(event):
         with ApiClient(configuration) as api_client:
             line_bot_api = MessagingApi(api_client)
             ask_msg = (
-                "請輸入您想查詢的國家地點或關鍵字，例如：\n"
-                "查詢歷史 日本\n"
-                "查詢歷史 義大利"
+                "請輸入您想查詢的國家地點或關鍵字:\n"
+                "國家地點: \n"
+                "關鍵字: \n"
             )
             line_bot_api.reply_message(
                 ReplyMessageRequest(
