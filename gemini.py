@@ -109,7 +109,7 @@ def callback():
 @handler.add(MessageEvent, message=TextMessageContent)
 def handle_text_message(event):
     user_input = event.message.text.strip()
-    if user_input == "新增規劃":
+    if user_input == "我要新增規劃":
         with ApiClient(configuration) as api_client:
             line_bot_api = MessagingApi(api_client)
             plan_msg = (
