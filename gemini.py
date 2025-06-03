@@ -105,10 +105,16 @@ def callback():
     return "OK"
 
 
+# 新增：用戶歷史查詢記錄（僅記憶於記憶體，重啟會消失）
+user_history = {}
+
+
 # === 處理文字訊息 ===
 @handler.add(MessageEvent, message=TextMessageContent)
 def handle_text_message(event):
     user_input = event.message.text.strip()
+    user_id = event.source.user_id if hasattr(event.source, "user_id") else None
+
     if user_input == "我要新增規劃":
         with ApiClient(configuration) as api_client:
             line_bot_api = MessagingApi(api_client)
@@ -126,6 +132,23 @@ def handle_text_message(event):
                 )
             )
         return
+
+    if user_input == "歷史紀錄":
+        with ApiClient(configuration) as api_client:
+            line_bot_api = MessagingApi(api_client)
+            if user_id and user_id in user_history and user_history[user_id]:
+                history_list = "\n".join(f"{idx+1}. {place}" for idx, place in enumerate(user_history[user_id]))
+                msg = f"您查詢過的國家地點：\n{history_list}"
+            else:
+                msg = "您尚未查詢過任何國家地點。"
+            line_bot_api.reply_message(
+                ReplyMessageRequest(
+                    reply_token=event.reply_token,
+                    messages=[TextMessage(text=msg)],
+                )
+            )
+        return
+
     if user_input.startswith("AI "):
         prompt = user_input[3:].strip()
         try:
@@ -185,6 +208,18 @@ def handle_text_message(event):
                 and ("人" in user_input or "位" in user_input)
                 and ("天" in user_input or "日" in user_input)
             ):
+                # 擷取地點資訊並存入歷史
+                if user_id:
+                    import re
+                    # 嘗試擷取「地點」或「國家」關鍵字後的內容
+                    match = re.search(r"(?:地點|國家|去)([：: ]*)([\u4e00-\u9fa5A-Za-z0-9 ]+)", user_input)
+                    if match:
+                        place = match.group(2).strip()
+                        if user_id not in user_history:
+                            user_history[user_id] = []
+                        if place and place not in user_history[user_id]:
+                            user_history[user_id].append(place)
+
                 # 已包含四項資訊，進行旅遊規劃
                 prompt = (
                     f"以下是使用者提供的旅遊資訊：\n{user_input}\n"
