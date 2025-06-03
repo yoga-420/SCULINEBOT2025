@@ -269,6 +269,47 @@ def handle_text_message(event):
                 )
             return
 
+    # 新增：支援複合格式查詢
+    if user_input.startswith("請輸入您想查詢的資訊"):
+        # 解析格式
+        import re
+        place = None
+        keyword = None
+        # 國家地點: (內容)
+        m1 = re.search(r"國家地點[:：]([^\n]*)", user_input)
+        if m1:
+            place = m1.group(1).strip()
+        # 關鍵字: (內容)
+        m2 = re.search(r"關鍵字[:：]([^\n]*)", user_input)
+        if m2:
+            keyword = m2.group(1).strip()
+        # 查詢歷史
+        filtered = []
+        for p, advice in user_history.get(user_id, []):
+            match_place = place and place in p
+            match_keyword = keyword and (keyword in p or keyword in advice)
+            if (place and keyword and match_place and match_keyword) or \
+               (place and not keyword and match_place) or \
+               (not place and keyword and match_keyword):
+                filtered.append((p, advice))
+        with ApiClient(configuration) as api_client:
+            line_bot_api = MessagingApi(api_client)
+            if filtered:
+                history_list = "\n\n".join(
+                    f"{idx+1}. {p}\n建議：{advice}"
+                    for idx, (p, advice) in enumerate(filtered)
+                )
+                msg = f"查詢結果：\n{history_list}"
+            else:
+                msg = "沒有查詢過符合條件的國家地點或建議。"
+            line_bot_api.reply_message(
+                ReplyMessageRequest(
+                    reply_token=event.reply_token,
+                    messages=[TextMessage(text=msg)],
+                )
+            )
+        return
+
     # 若無任何條件符合，給予預設回應，避免無回應
     with ApiClient(configuration) as api_client:
         line_bot_api = MessagingApi(api_client)
