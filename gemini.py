@@ -162,17 +162,25 @@ def handle_text_message(event):
 
     # 搜尋模式下，所有輸入都視為關鍵字查詢
     if user_id and user_search_mode.get(user_id, False):
+        # 只要 user_id 有歷史紀錄
         if user_id in user_history and user_history[user_id]:
-            filtered = [(place, advice) for place, advice in user_history[user_id] if user_input in place or user_input in advice]
+            # 遍歷歷史紀錄，找出地點或建議中包含 user_input 的紀錄
+            filtered = [
+                (place, advice)
+                for place, advice in user_history[user_id]
+                if user_input in place or user_input in advice
+            ]
             with ApiClient(configuration) as api_client:
                 line_bot_api = MessagingApi(api_client)
                 if filtered:
+                    # 有找到符合的紀錄，組成回應訊息
                     history_list = "\n\n".join(
                         f"{idx+1}. {place}\n建議：{advice}"
                         for idx, (place, advice) in enumerate(filtered)
                     )
                     msg = f"查詢「{user_input}」的歷史紀錄：\n{history_list}"
                 else:
+                    # 沒有找到符合的紀錄
                     msg = f"沒有查詢過包含「{user_input}」的國家地點或建議。"
                 line_bot_api.reply_message(
                     ReplyMessageRequest(
@@ -181,6 +189,7 @@ def handle_text_message(event):
                     )
                 )
         else:
+            # 沒有任何歷史紀錄
             with ApiClient(configuration) as api_client:
                 line_bot_api = MessagingApi(api_client)
                 msg = "您尚未查詢過任何旅遊資訊。"
