@@ -74,8 +74,18 @@ handler = WebhookHandler(channel_secret)
 
 # === AI Query 包裝 ===
 def query(payload):
-    response = chat.send_message(message=payload)
-    return response.text
+    try:
+        response = chat.send_message(message=payload)
+        # 防呆：response 可能不是物件或沒有 .text
+        if hasattr(response, "text"):
+            return response.text
+        elif isinstance(response, str):
+            return response
+        else:
+            return "抱歉，AI 沒有回應內容。"
+    except Exception as e:
+        logging.error(f"Gemini API error in query(): {e}")
+        return "抱歉，AI 回應時發生錯誤。"
 
 
 # === 靜態圖檔路由 ===
@@ -111,6 +121,7 @@ user_history = {}
 # 新增：用戶搜尋模式狀態（user_id: bool）
 user_search_mode = {}
 
+# === 處理文字訊息 ===
 @handler.add(MessageEvent, message=TextMessageContent)
 def handle_text_message(event):
     user_input = event.message.text.strip()
@@ -203,7 +214,27 @@ def handle_text_message(event):
             )
         return
 
-   
+    else:
+        with ApiClient(configuration) as api_client:
+            line_bot_api = MessagingApi(api_client)
+            try:
+                response = query(event.message.text)
+                html_msg = markdown.markdown(response)
+                soup = BeautifulSoup(html_msg, "html.parser")
+                line_bot_api.reply_message_with_http_info(
+                    ReplyMessageRequest(
+                        reply_token=event.reply_token,
+                        messages=[TextMessage(text=soup.get_text())],
+                    )
+                )
+            except Exception as e:
+                app.logger.error(f"Error in handle_text_message: {e}")
+                line_bot_api.reply_message(
+                    ReplyMessageRequest(
+                        reply_token=event.reply_token,
+                        messages=[TextMessage(text="抱歉，AI 回應時發生錯誤。")],
+                    )
+                )
 
 # === 處理圖片訊息 ===
 @handler.add(MessageEvent, message=ImageMessageContent)
@@ -335,3 +366,7 @@ def handle_follow(event):
                 messages=[TextMessage(text=intro_msg)],
             )
         )
+
+# base_url 檢查
+if not base_url:
+    logging.warning("SPACE_HOST (base_url) 未設置，圖片/影片網址將無法正確顯示。")
