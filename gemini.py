@@ -263,7 +263,7 @@ def handle_text_message(event):
             line_bot_api = MessagingApi(api_client)
             try:
                 # 讓 Gemini 根據過去的對話記憶查詢
-                prompt = f"請根據你與我的所有對話記憶，查詢與「{user_input}」相關的旅遊建議或紀錄，並以原始回應回覆。若沒有相關紀錄，請明確說明。"
+                prompt = f"請根據你與我的所有對話記憶，查詢與「{user_input}」相關的旅遊建議或紀錄，並以與「{user_input}」相關的完整原始回應進行回覆。若沒有相關紀錄，請明確說明。"
                 response = query(prompt)
                 html_msg = markdown.markdown(response)
                 soup = BeautifulSoup(html_msg, "html.parser")
