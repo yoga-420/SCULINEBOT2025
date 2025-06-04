@@ -218,6 +218,9 @@ user_history = {}
 # 新增：用戶搜尋模式狀態（user_id: bool）
 user_search_mode = {}
 
+# 新增：用戶搜尋結果暫存（user_id: List[dict]）
+user_search_results = {}
+
 # === 處理文字訊息 ===
 @handler.add(MessageEvent, message=TextMessageContent)
 def handle_text_message(event):
@@ -262,15 +265,74 @@ def handle_text_message(event):
         with ApiClient(configuration) as api_client:
             line_bot_api = MessagingApi(api_client)
             try:
-                # 讓 Gemini 根據過去的對話記憶查詢
-                prompt = f"請根據你與我的所有對話記憶，查詢與「{user_input}」相關的旅遊建議或紀錄，並以與「{user_input}」相關的完整原始回應進行回覆。若沒有相關紀錄，請明確說明。"
+                # 若前次已查詢且輸入為數字或"全部顯示"，則回傳對應內容
+                if user_id in user_search_results and user_search_results[user_id]:
+                    if user_input.isdigit():
+                        idx = int(user_input) - 1
+                        results = user_search_results[user_id]
+                        if 0 <= idx < len(results):
+                            detail = results[idx]["full"]
+                            line_bot_api.reply_message(
+                                ReplyMessageRequest(
+                                    reply_token=event.reply_token,
+                                    messages=[TextMessage(text=detail)],
+                                )
+                            )
+                        else:
+                            line_bot_api.reply_message(
+                                ReplyMessageRequest(
+                                    reply_token=event.reply_token,
+                                    messages=[TextMessage(text="查無此編號，請重新輸入。")],
+                                )
+                            )
+                        return
+                    elif user_input == "全部顯示":
+                        details = "\n\n".join(
+                            f"{i+1}.\n{item['full']}" for i, item in enumerate(user_search_results[user_id])
+                        )
+                        line_bot_api.reply_message(
+                            ReplyMessageRequest(
+                                reply_token=event.reply_token,
+                                messages=[TextMessage(text=details)],
+                            )
+                        )
+                        return
+                # 否則進行新查詢
+                prompt = (
+                    f"請根據你與我的所有對話記憶，查詢與「{user_input}」相關的所有旅遊行程紀錄，"
+                    "如果有多筆，請依下列格式摘要列出：\n"
+                    "1. 🗓️ [日期] - [行程標題]\n"
+                    "   - 主要景點：[景點列表]\n"
+                    "   - 備註：[簡要說明]\n"
+                    "請勿直接給完整內容。"
+                    "最後請附註：請輸入想查看的編號（例如：1），或輸入「全部顯示」來查看完整內容。"
+                    "如果只有一筆，請直接顯示完整內容。"
+                    "如果沒有相關紀錄，請明確說明。"
+                    "請以繁體中文回覆。"
+                )
                 response = query(prompt)
                 html_msg = markdown.markdown(response)
                 soup = BeautifulSoup(html_msg, "html.parser")
+                text = soup.get_text()
+
+                # 嘗試解析 Gemini 回傳的摘要，並暫存
+                # 假設 Gemini 會依照格式列出多筆摘要，這裡簡單以數字開頭分段
+                import re
+                results = []
+                if "請輸入想查看的編號" in text or "全部顯示" in text:
+                    # 解析每一筆摘要
+                    matches = re.findall(r"\d+\..*?(?=\n\d+\.|\Z)", text, re.DOTALL)
+                    for m in matches:
+                        # 只存摘要，完整內容等用戶選擇時再查詢
+                        results.append({"summary": m.strip(), "full": None})
+                    user_search_results[user_id] = results
+                else:
+                    # 只有一筆或無資料，直接回傳
+                    user_search_results[user_id] = []
                 line_bot_api.reply_message_with_http_info(
                     ReplyMessageRequest(
                         reply_token=event.reply_token,
-                        messages=[TextMessage(text=soup.get_text())],
+                        messages=[TextMessage(text=text)],
                     )
                 )
             except Exception as e:
@@ -282,6 +344,11 @@ def handle_text_message(event):
                     )
                 )
         return
+
+    # 若用戶在搜尋模式下選擇摘要後，查詢完整內容
+    if user_id and user_id in user_search_results and user_search_results[user_id]:
+        # 若前面已處理，這裡可略過
+        pass
 
     if user_input == "我要新增規劃":
         with ApiClient(configuration) as api_client:
