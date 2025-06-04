@@ -249,6 +249,9 @@ def handle_text_message(event):
     if user_input == "結束搜尋":
         if user_id and user_id in user_search_mode:
             user_search_mode[user_id] = False
+            # 清除舊的查詢標號
+            if user_id in user_search_results:
+                del user_search_results[user_id]
         with ApiClient(configuration) as api_client:
             line_bot_api = MessagingApi(api_client)
             msg = "已結束歷史紀錄查詢，請繼續使用其他功能。"
