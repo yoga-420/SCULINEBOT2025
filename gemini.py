@@ -46,7 +46,7 @@ chat = client.chats.create(
     model="gemini-2.0-flash",
     config=GenerateContentConfig(
         # 修改為旅遊規劃專家
-        system_instruction= """
+        system_instruction="""
 你是LINE平台上的旅遊機器人「旅遊小管家 小花」，目標是成為用戶的旅遊達人，協助探索、規劃旅程、解答問題。核心功能：
 
 1. 依興趣（美食、文化、戶外）、預算(預設台幣)、地點，推薦景點、餐廳，提供即時資訊（開放時間、票價）。
@@ -142,8 +142,8 @@ chat = client.chats.create(
 日期:6/1-6/4
 人數:2
 旅行預算:10000
-想去的景點或餐廳:"""
-
+想去的景點或餐廳:
+""",
         tools=[google_search_tool],
         response_modalities=["TEXT"],
     )
