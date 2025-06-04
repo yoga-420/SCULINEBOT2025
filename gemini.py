@@ -186,11 +186,14 @@ def handle_text_message(event):
             line_bot_api = MessagingApi(api_client)
             plan_msg = (
                 "請告訴我以下資訊:\n"
+                "\n"
                 "1.旅遊國家地點:\n"
                 "2.日期:\n"
                 "3.人數:\n"
                 "4.旅行預算:\n"
                 "5.想去的景點或餐廳:"
+                "\n"
+                "請幫我複製此對話框的訊息來回覆問題！"
             )
             line_bot_api.reply_message(
                 ReplyMessageRequest(
