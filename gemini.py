@@ -160,43 +160,28 @@ def handle_text_message(event):
             )
         return
 
-    # 搜尋模式下，所有輸入都視為關鍵字查詢
+    # 搜尋模式下，所有輸入都交給 Gemini 查詢記憶
     if user_id and user_search_mode.get(user_id, False):
-        # 只要 user_id 有歷史紀錄
-        if user_id in user_history and user_history[user_id]:
-            # 遍歷歷史紀錄，找出地點或建議中包含 user_input 的紀錄
-            filtered = [
-                (place, advice)
-                for place, advice in user_history[user_id]
-                if user_input in place or user_input in advice
-            ]
-            with ApiClient(configuration) as api_client:
-                line_bot_api = MessagingApi(api_client)
-                if filtered:
-                    # 有找到符合的紀錄，組成回應訊息
-                    history_list = "\n\n".join(
-                        f"{idx+1}. {place}\n建議：{advice}"
-                        for idx, (place, advice) in enumerate(filtered)
-                    )
-                    msg = f"查詢「{user_input}」的歷史紀錄：\n{history_list}"
-                else:
-                    # 沒有找到符合的紀錄
-                    msg = f"沒有查詢過包含「{user_input}」的國家地點或建議。"
-                line_bot_api.reply_message(
+        with ApiClient(configuration) as api_client:
+            line_bot_api = MessagingApi(api_client)
+            try:
+                # 讓 Gemini 根據過去的對話記憶查詢
+                prompt = f"請根據你與我的所有對話記憶，查詢與「{user_input}」相關的旅遊建議或紀錄，並以條列方式回覆。若沒有相關紀錄，請明確說明。"
+                response = query(prompt)
+                html_msg = markdown.markdown(response)
+                soup = BeautifulSoup(html_msg, "html.parser")
+                line_bot_api.reply_message_with_http_info(
                     ReplyMessageRequest(
                         reply_token=event.reply_token,
-                        messages=[TextMessage(text=msg)],
+                        messages=[TextMessage(text=soup.get_text())],
                     )
                 )
-        else:
-            # 沒有任何歷史紀錄
-            with ApiClient(configuration) as api_client:
-                line_bot_api = MessagingApi(api_client)
-                msg = "您尚未查詢過任何旅遊資訊。"
+            except Exception as e:
+                app.logger.error(f"Error in search mode (Gemini memory): {e}")
                 line_bot_api.reply_message(
                     ReplyMessageRequest(
                         reply_token=event.reply_token,
-                        messages=[TextMessage(text=msg)],
+                        messages=[TextMessage(text="抱歉，AI 查詢記憶時發生錯誤。")],
                     )
                 )
         return
