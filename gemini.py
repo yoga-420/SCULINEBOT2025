@@ -75,7 +75,7 @@ chat = client.chats.create(
 以下是一些規劃方向：
 
 行程建議：
-
+ 
 6/1 (第一天)：
 抵達台南火車站，前往民宿/旅館辦理入住。
 下午：參觀赤崁樓、祀典武廟、大天后宮。
@@ -379,7 +379,7 @@ def handle_text_message(event):
                     )
                 )
         return
-
+   
     # 若用戶在搜尋模式下選擇摘要後，查詢完整內容
     if user_id and user_id in user_search_results and user_search_results[user_id]:
         # 若前面已處理，這裡可略過
