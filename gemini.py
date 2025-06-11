@@ -257,11 +257,15 @@ def handle_text_message(event):
                                 detail = results[idx]["full"]
                             else:
                                 # 重新查詢該筆完整內容
+                                # 只取掉前面的編號，避免 prompt 再帶入 1. 2. 3.
                                 summary = results[idx]["summary"]
+                                # 移除前面的數字與點
+                                import re
+                                summary_no_num = re.sub(r"^\d+\.\s*", "", summary)
                                 prompt = (
                                     f"請根據你與我的所有對話記憶，針對以下摘要內容，"
                                     f"詳細列出該旅遊行程的完整內容，請分早上、下午、晚上，"
-                                    f"並以繁體中文回覆：\n{summary}"
+                                    f"並以繁體中文回覆：\n{summary_no_num}"
                                 )
                                 detail = query(prompt)
                                 user_search_results[user_id][idx]["full"] = detail
@@ -321,11 +325,9 @@ def handle_text_message(event):
                     # 解析 1. 2. 3. 開頭的段落
                     matches = re.findall(r"(\d+)\.\s(.*?)(?=\n\d+\.\s|\Z)", text, re.DOTALL)
                     for num, content in matches:
-                        # 在摘要前加上代號
                         summary = f"{num}. {content.strip()}"
                         results.append({"summary": summary, "full": None})
                     user_search_results[user_id] = results
-                    # 組合摘要訊息
                     summary_text = "\n\n".join(item["summary"] for item in results)
                     summary_text += "\n\n請輸入想查看的代號（例如：1），來查看完整內容。"
                     line_bot_api.reply_message_with_http_info(
