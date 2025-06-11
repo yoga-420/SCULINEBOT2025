@@ -252,7 +252,19 @@ def handle_text_message(event):
                         idx = int(user_input) - 1
                         results = user_search_results[user_id]
                         if 0 <= idx < len(results):
-                            detail = results[idx]["full"]
+                            # 若已經有完整內容則直接回傳，否則即時查詢
+                            if results[idx]["full"]:
+                                detail = results[idx]["full"]
+                            else:
+                                # 重新查詢該筆完整內容
+                                summary = results[idx]["summary"]
+                                prompt = (
+                                    f"請根據你與我的所有對話記憶，針對以下摘要內容，"
+                                    f"詳細列出該旅遊行程的完整內容，請分早上、下午、晚上，"
+                                    f"並以繁體中文回覆：\n{summary}"
+                                )
+                                detail = query(prompt)
+                                user_search_results[user_id][idx]["full"] = detail
                             line_bot_api.reply_message(
                                 ReplyMessageRequest(
                                     reply_token=event.reply_token,
@@ -269,7 +281,7 @@ def handle_text_message(event):
                         return
                     elif user_input == "全部顯示":
                         details = "\n\n".join(
-                            f"{i+1}.\n{item['full']}" for i, item in enumerate(user_search_results[user_id])
+                            f"{i+1}.\n{item['full'] or item['summary']}" for i, item in enumerate(user_search_results[user_id])
                         )
                         line_bot_api.reply_message(
                             ReplyMessageRequest(
@@ -306,19 +318,30 @@ def handle_text_message(event):
                 import re
                 results = []
                 if "請輸入想查看的代號" in text:
-                    # 修正正則表達式，抓取 1. 2. 3. 開頭的段落
-                    matches = re.findall(r"\d+\.\s.*?(?=\n\d+\.\s|\Z)", text, re.DOTALL)
-                    for m in matches:
-                        results.append({"summary": m.strip(), "full": None})
+                    # 解析 1. 2. 3. 開頭的段落
+                    matches = re.findall(r"(\d+)\.\s(.*?)(?=\n\d+\.\s|\Z)", text, re.DOTALL)
+                    for num, content in matches:
+                        # 在摘要前加上代號
+                        summary = f"{num}. {content.strip()}"
+                        results.append({"summary": summary, "full": None})
                     user_search_results[user_id] = results
+                    # 組合摘要訊息
+                    summary_text = "\n\n".join(item["summary"] for item in results)
+                    summary_text += "\n\n請輸入想查看的代號（例如：1），來查看完整內容。"
+                    line_bot_api.reply_message_with_http_info(
+                        ReplyMessageRequest(
+                            reply_token=event.reply_token,
+                            messages=[TextMessage(text=summary_text)],
+                        )
+                    )
                 else:
                     user_search_results[user_id] = []
-                line_bot_api.reply_message_with_http_info(
-                    ReplyMessageRequest(
-                        reply_token=event.reply_token,
-                        messages=[TextMessage(text=text)],
+                    line_bot_api.reply_message_with_http_info(
+                        ReplyMessageRequest(
+                            reply_token=event.reply_token,
+                            messages=[TextMessage(text=text)],
+                        )
                     )
-                )
                 logging.info("[search_mode] reply_message_with_http_info sent")
             except Exception as e:
                 app.logger.error(f"[search_mode] Error in search mode (Gemini memory): {e}")
