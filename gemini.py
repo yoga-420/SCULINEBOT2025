@@ -507,26 +507,6 @@ def handle_video_message(event):
             )
         )
 
-# === 處理使用者加入聊天室（加好友/進入聊天室）===
-@handler.add(FollowEvent)
-def handle_follow(event):
-    with ApiClient(configuration) as api_client:
-        line_bot_api = MessagingApi(api_client)
-        intro_msg = (
-            "您好！我是您的旅遊小管家小花。\n"
-            "請問：\n"
-            "1. 想去的旅遊地點？\n"
-            "2. 預算金額？\n"
-            "3. 旅遊天數？\n"
-            "4. 旅遊人數？\n"
-            "請一次告訴我這四個資訊，讓我幫您規劃行程！"
-        )
-        line_bot_api.reply_message(
-            ReplyMessageRequest(
-                reply_token=event.reply_token,
-                messages=[TextMessage(text=intro_msg)],
-            )
-        )
 
 # base_url 檢查
 if not base_url:
