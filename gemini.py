@@ -211,8 +211,8 @@ def handle_text_message(event):
         with ApiClient(configuration) as api_client:
             line_bot_api = MessagingApi(api_client)
             ask_msg = (
-                "請直接輸入您想查詢的國家地點或關鍵字（多次查詢皆可），\n"
-                "記得按下「結束搜尋」選單按紐來結束搜尋模式。\n"
+                "請直接輸入您想查詢的國家地點或關鍵字（多次查詢皆可），"
+                "記得按下「結束搜尋」選單按紐來結束搜尋模式。"
             )
             line_bot_api.reply_message(
                 ReplyMessageRequest(
