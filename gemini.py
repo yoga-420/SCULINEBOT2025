@@ -255,6 +255,7 @@ def handle_text_message(event):
                             # 若已經有完整內容則直接回傳，否則即時查詢
                             if results[idx]["full"]:
                                 detail = results[idx]["full"]
+                                reply_text = f"這是您第{idx+1}個規劃的完整內容：\n{detail}"
                             else:
                                 # 重新查詢該筆完整內容
                                 # 只取掉前面的編號，避免 prompt 再帶入 1. 2. 3.
@@ -269,10 +270,11 @@ def handle_text_message(event):
                                 )
                                 detail = query(prompt)
                                 user_search_results[user_id][idx]["full"] = detail
+                                reply_text = f"這是您第{idx+1}個規劃的完整內容：\n{detail}"
                             line_bot_api.reply_message(
                                 ReplyMessageRequest(
                                     reply_token=event.reply_token,
-                                    messages=[TextMessage(text=detail)],
+                                    messages=[TextMessage(text=reply_text)],
                                 )
                             )
                         else:
