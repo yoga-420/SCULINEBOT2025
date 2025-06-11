@@ -340,7 +340,8 @@ def handle_text_message(event):
                         else:
                             # 若無法解析則維持原本內容
                             summary = f"{idx+1}. {content.strip()}"
-                        results.append({"summary": summary, "full": None})
+                        # 直接將原始 content 存進 full 欄位
+                        results.append({"summary": summary, "full": content.strip()})
                     user_search_results[user_id] = results
                     # 重新組合摘要訊息，前面加上 [編號1] [編號2] ...
                     summary_text = ""
