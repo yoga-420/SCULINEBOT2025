@@ -210,6 +210,11 @@ def handle_text_message(event):
     # 進入歷史紀錄搜尋模式
     if user_input == "我要瀏覽歷史紀錄":
         if user_id:
+            # 只在進入歷史紀錄查詢時清除搜尋結果與步驟，不要在每次訊息都清除
+            if user_id in user_search_results:
+                del user_search_results[user_id]
+            if user_id in user_search_step:
+                del user_search_step[user_id]
             user_search_mode[user_id] = True
             user_search_step[user_id] = "wait_keyword"
         with ApiClient(configuration) as api_client:
