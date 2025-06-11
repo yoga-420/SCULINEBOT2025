@@ -321,7 +321,8 @@ def handle_text_message(event):
                 # 解析每一筆摘要，存入 user_search_results 以便後續查詢完整內容
                 import re
                 results = []
-                if "請輸入想查看的代號" in text:
+                # 修正：若 Gemini 回傳只有「請輸入想查看的代號」而沒有任何摘要，代表沒有找到紀錄
+                if "請輸入想查看的代號" in text and re.search(r"\d+\.\s", text):
                     # 解析 1. 2. 3. 開頭的段落
                     matches = re.findall(r"(\d+)\.\s(.*?)(?=\n\d+\.\s|\Z)", text, re.DOTALL)
                     for num, content in matches:
@@ -337,6 +338,7 @@ def handle_text_message(event):
                         )
                     )
                 else:
+                    # 若沒有任何摘要，直接回傳 Gemini 的訊息
                     user_search_results[user_id] = []
                     line_bot_api.reply_message_with_http_info(
                         ReplyMessageRequest(
