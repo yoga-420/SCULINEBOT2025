@@ -212,7 +212,7 @@ def handle_text_message(event):
             line_bot_api = MessagingApi(api_client)
             ask_msg = (
                 "請直接輸入您想查詢的國家地點或關鍵字（多次查詢皆可），\n"
-                "若要結束搜尋，請輸入：結束搜尋"
+                "記得按下「結束搜尋」選單按紐來結束搜尋模式。\n"
             )
             line_bot_api.reply_message(
                 ReplyMessageRequest(
