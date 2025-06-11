@@ -255,8 +255,8 @@ def handle_text_message(event):
         with ApiClient(configuration) as api_client:
             line_bot_api = MessagingApi(api_client)
             try:
-                # 新增：搜尋步驟判斷
                 step = user_search_step.get(user_id, "wait_keyword")
+                # 只允許查詢一次關鍵字，之後只能選擇紀錄
                 if step == "wait_select" and user_id in user_search_results and user_search_results[user_id]:
                     if user_input.isdigit():
                         idx = int(user_input) - 1
@@ -303,7 +303,6 @@ def handle_text_message(event):
                         )
                         return
                     else:
-                        # 只允許輸入數字或全部顯示
                         line_bot_api.reply_message(
                             ReplyMessageRequest(
                                 reply_token=event.reply_token,
@@ -311,10 +310,8 @@ def handle_text_message(event):
                             )
                         )
                         return
-                # 只有在 wait_keyword 狀態下才允許查詢新關鍵字
                 if step == "wait_keyword":
-                    # 否則進行新查詢
-                    # 進行新查詢，請 Gemini 只給與關鍵字有關的紀錄摘要，並分早上/下午/晚上
+                    # 只允許查詢一次關鍵字
                     prompt = (
                         f"請根據你與我的所有對話記憶，查詢與「{user_input}」相關的所有旅遊行程紀錄，"
                         "只顯示與該關鍵字有關的紀錄。\n"
@@ -334,36 +331,24 @@ def handle_text_message(event):
                     logging.info(f"[search_mode] Gemini summary response: {response}")
                     html_msg = markdown.markdown(response)
                     soup = BeautifulSoup(html_msg, "html.parser")
-                    # 將多餘空行去除，並用單一換行分隔，縮小間距
                     text = '\n'.join([line.strip() for line in soup.get_text(separator="\n").splitlines() if line.strip()])
-
-                    # 解析每一筆摘要，存入 user_search_results 以便後續查詢完整內容
                     import re
                     results = []
-                    # 修正：若 Gemini 回傳只有「請輸入想查看的代號」而沒有任何摘要，代表沒有找到紀錄
                     if "請輸入想查看的代號" in text and re.search(r"\d+\.\s", text):
-                        # 解析 1. 2. 3. 開頭的段落
                         matches = re.findall(r"(\d+)\.\s(.*?)(?=\n\d+\.\s|\Z)", text, re.DOTALL)
                         for idx, (num, content) in enumerate(matches):
-                            # 嘗試從內容中抓取日期與地點資訊
-                            # 預設格式：🗓️ [日期] - [行程標題]
                             date_place_match = re.search(r"🗓️\s*([^\s-]+(?:-[^\s-]+)*)\s*-\s*(.+)", content)
                             if date_place_match:
                                 date_str = date_place_match.group(1).strip()
                                 place_str = date_place_match.group(2).strip()
-                                # 只取第一行作為標題
                                 first_line = f"{idx+1}. {date_str}-{place_str}"
-                                # 其餘內容（去掉第一行）
                                 rest = content.split('\n', 1)[1].strip() if '\n' in content else ""
                                 summary = f"{first_line}\n{rest}" if rest else first_line
                             else:
-                                # 若無法解析則維持原本內容
                                 summary = f"{idx+1}. {content.strip()}"
-                            # 直接將原始 content 存進 full 欄位
                             results.append({"summary": summary, "full": content.strip()})
                         user_search_results[user_id] = results
                         user_search_step[user_id] = "wait_select"
-                        # 重新組合摘要訊息，前面加上 [編號1] [編號2] ...
                         summary_text = ""
                         for i, item in enumerate(results):
                             lines = item["summary"].split('\n', 1)
@@ -388,16 +373,7 @@ def handle_text_message(event):
                             )
                         )
                     logging.info("[search_mode] reply_message_with_http_info sent")
-                else:
-                    # 若沒有任何摘要，直接回傳 Gemini 的訊息
-                    user_search_results[user_id] = []
-                    line_bot_api.reply_message(
-                        ReplyMessageRequest(
-                            reply_token=event.reply_token,
-                            messages=[TextMessage(text=text)],
-                        )
-                    )
-                logging.info("[search_mode] reply_message_with_http_info sent")
+                    return
             except Exception as e:
                 app.logger.error(f"[search_mode] Error in search mode (Gemini memory): {e}")
                 line_bot_api.reply_message(
