@@ -137,17 +137,22 @@ handler = WebhookHandler(channel_secret)
 
 # === AI Query 包裝 ===
 def query(payload):
+    logging.info(f"[query] Gemini input: {payload}")
     try:
         response = chat.send_message(message=payload)
+        logging.info(f"[query] Gemini raw response: {response}")
         # 防呆：response 可能不是物件或沒有 .text
         if hasattr(response, "text"):
+            logging.info(f"[query] Gemini response.text: {response.text}")
             return response.text
         elif isinstance(response, str):
+            logging.info(f"[query] Gemini response(str): {response}")
             return response
         else:
+            logging.warning("[query] Gemini response is empty or unknown format.")
             return "抱歉，AI 沒有回應內容。"
     except Exception as e:
-        logging.error(f"Gemini API error in query(): {e}")
+        logging.error(f"[query] Gemini API error in query(): {e}")
         return "抱歉，AI 回應時發生錯誤。"
 
 
@@ -167,13 +172,18 @@ def home():
 def callback():
     signature = request.headers.get("X-Line-Signature")
     body = request.get_data(as_text=True)
-    app.logger.info(f"Request body: {body}")
+    app.logger.info(f"[callback] Request body: {body}")
+    app.logger.info(f"[callback] Signature: {signature}")
 
     try:
         handler.handle(body, signature)
+        app.logger.info("[callback] Handler.handle() success")
     except InvalidSignatureError:
-        app.logger.warning("Invalid signature. Please check channel credentials.")
+        app.logger.warning("[callback] Invalid signature. Please check channel credentials.")
         abort(400)
+    except Exception as e:
+        app.logger.error(f"[callback] Exception in handler.handle: {e}")
+        abort(500)
 
     return "OK"
 
@@ -192,6 +202,7 @@ user_search_results = {}
 def handle_text_message(event):
     user_input = event.message.text.strip()
     user_id = event.source.user_id if hasattr(event.source, "user_id") else None
+    logging.info(f"[handle_text_message] user_id: {user_id}, user_input: {user_input}")
 
     # 進入歷史紀錄搜尋模式
     if user_input == "我要瀏覽歷史紀錄":
@@ -234,6 +245,7 @@ def handle_text_message(event):
         with ApiClient(configuration) as api_client:
             line_bot_api = MessagingApi(api_client)
             try:
+                logging.info(f"[search_mode] user_id: {user_id}, input: {user_input}, search_results: {user_search_results.get(user_id)}")
                 # 若前次已查詢且輸入為數字或"全部顯示"，則回傳對應內容
                 if user_id in user_search_results and user_search_results[user_id]:
                     if user_input.isdigit():
@@ -280,6 +292,7 @@ def handle_text_message(event):
                     "請以繁體中文回覆。"
                 )
                 response = query(prompt)
+                logging.info(f"[search_mode] Gemini summary response: {response}")
                 html_msg = markdown.markdown(response)
                 soup = BeautifulSoup(html_msg, "html.parser")
                 text = soup.get_text()
@@ -304,8 +317,9 @@ def handle_text_message(event):
                         messages=[TextMessage(text=text)],
                     )
                 )
+                logging.info("[search_mode] reply_message_with_http_info sent")
             except Exception as e:
-                app.logger.error(f"Error in search mode (Gemini memory): {e}")
+                app.logger.error(f"[search_mode] Error in search mode (Gemini memory): {e}")
                 line_bot_api.reply_message(
                     ReplyMessageRequest(
                         reply_token=event.reply_token,
@@ -347,7 +361,9 @@ def handle_text_message(event):
         with ApiClient(configuration) as api_client:
             line_bot_api = MessagingApi(api_client)
             try:
+                logging.info(f"[handle_text_message] Querying Gemini with: {event.message.text}")
                 response = query(event.message.text)
+                logging.info(f"[handle_text_message] Gemini response: {response}")
                 html_msg = markdown.markdown(response)
                 soup = BeautifulSoup(html_msg, "html.parser")
                 line_bot_api.reply_message_with_http_info(
@@ -356,8 +372,9 @@ def handle_text_message(event):
                         messages=[TextMessage(text=soup.get_text())],
                     )
                 )
+                logging.info("[handle_text_message] reply_message_with_http_info sent")
             except Exception as e:
-                app.logger.error(f"Error in handle_text_message: {e}")
+                app.logger.error(f"[handle_text_message] Error in handle_text_message: {e}")
                 line_bot_api.reply_message(
                     ReplyMessageRequest(
                         reply_token=event.reply_token,
