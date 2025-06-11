@@ -282,10 +282,10 @@ def handle_text_message(event):
                 prompt = (
                     f"請根據你與我的所有對話記憶，查詢與「{user_input}」相關的所有旅遊行程紀錄，"
                     "如果有多筆，請依下列格式摘要列出，內容請簡短：\n"
-                    "1. 🗓️ [日期] - [行程標題] 主要景點：[景點列表] (簡要說明)\n"
-                    "2. ...\n"
-                    "請勿給完整內容，只給每筆紀錄的簡短摘要，並在每筆前加上編號。\n"
-                    "最後請附註：請輸入想查看的編號（例如：1），來查看完整內容。\n"
+                    "A1. 🗓️ [日期] - [行程標題] 主要景點：[景點列表] (簡要說明)\n"
+                    "A2. ...\n"
+                    "請勿給完整內容，只給每筆紀錄的簡短摘要，並在每筆前加上代號（A1、A2、A3...）。\n"
+                    "最後請附註：請輸入想查看的代號（例如：A1），來查看完整內容。\n"
                     "如果只有一筆，請直接顯示完整內容。\n"
                     "如果沒有相關紀錄，請明確說明。\n"
                     "請以繁體中文回覆。"
@@ -300,8 +300,8 @@ def handle_text_message(event):
                 # 解析每一筆摘要，存入 user_search_results 以便後續查詢完整內容
                 import re
                 results = []
-                if "請輸入想查看的編號" in text:
-                    matches = re.findall(r"\d+\. .*?(?=\n\d+\.|\Z)", text, re.DOTALL)
+                if "請輸入想查看的代號" in text:
+                    matches = re.findall(r"A\d+\. .*?(?=\nA\d+\.|\Z)", text, re.DOTALL)
                     for m in matches:
                         results.append({"summary": m.strip(), "full": None})
                     user_search_results[user_id] = results
