@@ -210,13 +210,10 @@ def handle_text_message(event):
     # 進入歷史紀錄搜尋模式
     if user_input == "我要瀏覽歷史紀錄":
         if user_id:
-            # 只在進入歷史紀錄查詢時清除搜尋結果與步驟，不要在每次訊息都清除
-            if user_id in user_search_results:
-                del user_search_results[user_id]
-            if user_id in user_search_step:
-                del user_search_step[user_id]
-            user_search_mode[user_id] = True
+            # 只在進入歷史紀錄查詢時清除所有紀錄與狀態
+            user_search_results[user_id] = []
             user_search_step[user_id] = "wait_keyword"
+            user_search_mode[user_id] = True
         with ApiClient(configuration) as api_client:
             line_bot_api = MessagingApi(api_client)
             ask_msg = (
@@ -258,17 +255,17 @@ def handle_text_message(event):
                 step = user_search_step.get(user_id, "wait_keyword")
                 # 只允許查詢一次關鍵字，之後只能選擇紀錄
                 if step == "wait_select" and user_id in user_search_results and user_search_results[user_id]:
-                    if user_input.isdigit():
-                        idx = int(user_input) - 1
+                    if user_input.lower().startswith("a") and user_input[1:].isdigit():
+                        idx = int(user_input[1:]) - 1
                         results = user_search_results[user_id]
                         if 0 <= idx < len(results):
                             if results[idx]["full"]:
                                 detail = results[idx]["full"]
-                                reply_text = f"這是您第{idx+1}個規劃的完整內容：\n{detail}"
+                                reply_text = f"這是您第a{idx+1}個規劃的完整內容：\n{detail}"
                             else:
                                 summary = results[idx]["summary"]
                                 import re
-                                summary_no_num = re.sub(r"^\d+\.\s*", "", summary)
+                                summary_no_num = re.sub(r"^a\d+\.\s*", "", summary)
                                 prompt = (
                                     f"請根據你與我的所有對話記憶，針對以下摘要內容，"
                                     f"詳細列出該旅遊行程的完整內容，請分早上、下午、晚上，"
@@ -276,7 +273,7 @@ def handle_text_message(event):
                                 )
                                 detail = query(prompt)
                                 user_search_results[user_id][idx]["full"] = detail
-                                reply_text = f"這是您第{idx+1}個規劃的完整內容：\n{detail}"
+                                reply_text = f"這是您第a{idx+1}個規劃的完整內容：\n{detail}"
                             line_bot_api.reply_message(
                                 ReplyMessageRequest(
                                     reply_token=event.reply_token,
@@ -293,7 +290,7 @@ def handle_text_message(event):
                         return
                     elif user_input == "全部顯示":
                         details = "\n\n".join(
-                            f"{i+1}.\n{item['full'] or item['summary']}" for i, item in enumerate(user_search_results[user_id])
+                            f"a{i+1}.\n{item['full'] or item['summary']}" for i, item in enumerate(user_search_results[user_id])
                         )
                         line_bot_api.reply_message(
                             ReplyMessageRequest(
@@ -306,7 +303,7 @@ def handle_text_message(event):
                         line_bot_api.reply_message(
                             ReplyMessageRequest(
                                 reply_token=event.reply_token,
-                                messages=[TextMessage(text="請輸入想查看的編號（例如：1），或輸入「全部顯示」。")],
+                                messages=[TextMessage(text="請輸入想查看的編號（例如：a1），或輸入「全部顯示」。")],
                             )
                         )
                         return
@@ -316,13 +313,13 @@ def handle_text_message(event):
                         f"請根據你與我的所有對話記憶，查詢與「{user_input}」相關的所有旅遊行程紀錄，"
                         "只顯示與該關鍵字有關的紀錄。\n"
                         "如果有多筆，請依下列格式摘要列出，內容請簡短：\n"
-                        "1. 🗓️ [日期] - [行程標題]\n"
+                        "a1. 🗓️ [日期] - [行程標題]\n"
                         "   - 早上：[簡要說明]\n"
                         "   - 下午：[簡要說明]\n"
                         "   - 晚上：[簡要說明]\n"
-                        "2. ...\n"
-                        "請勿給完整內容，只給每筆紀錄的簡短摘要，並在每筆前加上代號（1、2、3...）。\n"
-                        "最後請附註：請輸入想查看的代號（例如：1），來查看完整內容。\n"
+                        "a2. ...\n"
+                        "請勿給完整內容，只給每筆紀錄的簡短摘要，並在每筆前加上代號（a1、a2、a3...）。\n"
+                        "最後請附註：請輸入想查看的代號（例如：a1），來查看完整內容。\n"
                         "如果只有一筆，請直接顯示完整內容，並請分早上、下午、晚上。\n"
                         "如果沒有相關紀錄，請明確說明。\n"
                         "請以繁體中文回覆。"
@@ -334,29 +331,30 @@ def handle_text_message(event):
                     text = '\n'.join([line.strip() for line in soup.get_text(separator="\n").splitlines() if line.strip()])
                     import re
                     results = []
-                    if "請輸入想查看的代號" in text and re.search(r"\d+\.\s", text):
-                        matches = re.findall(r"(\d+)\.\s(.*?)(?=\n\d+\.\s|\Z)", text, re.DOTALL)
+                    # 解析 a1. a2. a3. ...
+                    if "請輸入想查看的代號" in text and re.search(r"a\d+\.\s", text):
+                        matches = re.findall(r"a(\d+)\.\s(.*?)(?=\na\d+\.\s|\Z)", text, re.DOTALL)
                         for idx, (num, content) in enumerate(matches):
                             date_place_match = re.search(r"🗓️\s*([^\s-]+(?:-[^\s-]+)*)\s*-\s*(.+)", content)
                             if date_place_match:
                                 date_str = date_place_match.group(1).strip()
                                 place_str = date_place_match.group(2).strip()
-                                first_line = f"{idx+1}. {date_str}-{place_str}"
+                                first_line = f"a{idx+1}. {date_str}-{place_str}"
                                 rest = content.split('\n', 1)[1].strip() if '\n' in content else ""
                                 summary = f"{first_line}\n{rest}" if rest else first_line
                             else:
-                                summary = f"{idx+1}. {content.strip()}"
+                                summary = f"a{idx+1}. {content.strip()}"
                             results.append({"summary": summary, "full": content.strip()})
                         user_search_results[user_id] = results
                         user_search_step[user_id] = "wait_select"
                         summary_text = ""
                         for i, item in enumerate(results):
                             lines = item["summary"].split('\n', 1)
-                            summary_text += f"[編號{i+1}] {lines[0]}\n"
+                            summary_text += f"[a{i+1}] {lines[0]}\n"
                             if len(lines) > 1:
                                 summary_text += f"{lines[1]}\n"
                             summary_text += "\n"
-                        summary_text = summary_text.strip() + "\n\n請輸入想查看的代號（例如：1），來查看完整內容。"
+                        summary_text = summary_text.strip() + "\n\n請輸入想查看的代號（例如：a1），來查看完整內容。"
                         line_bot_api.reply_message(
                             ReplyMessageRequest(
                                 reply_token=event.reply_token,
