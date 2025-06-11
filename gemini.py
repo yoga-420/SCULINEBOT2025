@@ -343,8 +343,15 @@ def handle_text_message(event):
                         results.append({"summary": summary, "full": None})
                     user_search_results[user_id] = results
                     # 重新組合摘要訊息，前面加上 1. 7/5-地點 ...
-                    summary_text = "\n\n".join(item["summary"] for item in results)
-                    summary_text += "\n\n請輸入想查看的代號（例如：1），來查看完整內容。"
+                    summary_text = ""
+                    for i, item in enumerate(results):
+                        # 每一筆前面再加一次明確的編號
+                        lines = item["summary"].split('\n', 1)
+                        summary_text += f"{i+1}. {lines[0]}\n"
+                        if len(lines) > 1:
+                            summary_text += f"{lines[1]}\n"
+                        summary_text += "\n"
+                    summary_text = summary_text.strip() + "\n\n請輸入想查看的代號（例如：1），來查看完整內容。"
                     line_bot_api.reply_message_with_http_info(
                         ReplyMessageRequest(
                             reply_token=event.reply_token,
