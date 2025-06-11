@@ -326,11 +326,23 @@ def handle_text_message(event):
                     # 解析 1. 2. 3. 開頭的段落
                     matches = re.findall(r"(\d+)\.\s(.*?)(?=\n\d+\.\s|\Z)", text, re.DOTALL)
                     for idx, (num, content) in enumerate(matches):
-                        # 強制用自己的編號，避免 Gemini 回傳的編號不連續
-                        summary = f"{idx+1}. {content.strip()}"
+                        # 嘗試從內容中抓取日期與地點資訊
+                        # 預設格式：🗓️ [日期] - [行程標題]
+                        date_place_match = re.search(r"🗓️\s*([^\s-]+(?:-[^\s-]+)*)\s*-\s*(.+)", content)
+                        if date_place_match:
+                            date_str = date_place_match.group(1).strip()
+                            place_str = date_place_match.group(2).strip()
+                            # 只取第一行作為標題
+                            first_line = f"{idx+1}. {date_str}-{place_str}"
+                            # 其餘內容（去掉第一行）
+                            rest = content.split('\n', 1)[1].strip() if '\n' in content else ""
+                            summary = f"{first_line}\n{rest}" if rest else first_line
+                        else:
+                            # 若無法解析則維持原本內容
+                            summary = f"{idx+1}. {content.strip()}"
                         results.append({"summary": summary, "full": None})
                     user_search_results[user_id] = results
-                    # 重新組合摘要訊息，前面加上 1. 2. 3. ...
+                    # 重新組合摘要訊息，前面加上 1. 7/5-地點 ...
                     summary_text = "\n\n".join(item["summary"] for item in results)
                     summary_text += "\n\n請輸入想查看的代號（例如：1），來查看完整內容。"
                     line_bot_api.reply_message_with_http_info(
