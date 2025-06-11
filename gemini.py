@@ -296,14 +296,15 @@ def handle_text_message(event):
                 logging.info(f"[search_mode] Gemini summary response: {response}")
                 html_msg = markdown.markdown(response)
                 soup = BeautifulSoup(html_msg, "html.parser")
-                text = soup.get_text(separator="\n")  # 用單一換行分隔，縮小間距
+                # 將多餘空行去除，並用單一換行分隔，縮小間距
+                text = '\n'.join([line.strip() for line in soup.get_text(separator="\n").splitlines() if line.strip()])
 
                 # 直接回傳完整內容，不再只存摘要
                 user_search_results[user_id] = []
                 line_bot_api.reply_message_with_http_info(
                     ReplyMessageRequest(
                         reply_token=event.reply_token,
-                        messages=[TextMessage(text=text.strip())],
+                        messages=[TextMessage(text=text)],
                     )
                 )
                 logging.info("[search_mode] reply_message_with_http_info sent")
