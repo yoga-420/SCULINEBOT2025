@@ -306,7 +306,8 @@ def handle_text_message(event):
                 import re
                 results = []
                 if "請輸入想查看的代號" in text:
-                    matches = re.findall(r"A\d+\. .*?(?=\nA\d+\.| |\Z)", text, re.DOTALL)
+                    # 修正正則表達式，抓取 1. 2. 3. 開頭的段落
+                    matches = re.findall(r"\d+\.\s.*?(?=\n\d+\.\s|\Z)", text, re.DOTALL)
                     for m in matches:
                         results.append({"summary": m.strip(), "full": None})
                     user_search_results[user_id] = results
