@@ -354,7 +354,7 @@ def handle_text_message(event):
                             summary_text += f"{lines[1]}\n"
                         summary_text += "\n"
                     summary_text = summary_text.strip() + "\n\n請輸入想查看的代號（例如：1），來查看完整內容。"
-                    line_bot_api.reply_message_with_http_info(
+                    line_bot_api.reply_message(
                         ReplyMessageRequest(
                             reply_token=event.reply_token,
                             messages=[TextMessage(text=summary_text)],
@@ -363,7 +363,7 @@ def handle_text_message(event):
                 else:
                     # 若沒有任何摘要，直接回傳 Gemini 的訊息
                     user_search_results[user_id] = []
-                    line_bot_api.reply_message_with_http_info(
+                    line_bot_api.reply_message(
                         ReplyMessageRequest(
                             reply_token=event.reply_token,
                             messages=[TextMessage(text=text)],
@@ -382,7 +382,6 @@ def handle_text_message(event):
    
     # 若用戶在搜尋模式下選擇摘要後，查詢完整內容
     if user_id and user_id in user_search_results and user_search_results[user_id]:
-        # 若前面已處理，這裡可略過
         pass
 
     if user_input == "我要新增規劃":
