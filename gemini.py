@@ -325,10 +325,12 @@ def handle_text_message(event):
                 if "請輸入想查看的代號" in text and re.search(r"\d+\.\s", text):
                     # 解析 1. 2. 3. 開頭的段落
                     matches = re.findall(r"(\d+)\.\s(.*?)(?=\n\d+\.\s|\Z)", text, re.DOTALL)
-                    for num, content in matches:
-                        summary = f"{num}. {content.strip()}"
+                    for idx, (num, content) in enumerate(matches):
+                        # 強制用自己的編號，避免 Gemini 回傳的編號不連續
+                        summary = f"{idx+1}. {content.strip()}"
                         results.append({"summary": summary, "full": None})
                     user_search_results[user_id] = results
+                    # 重新組合摘要訊息，前面加上 1. 2. 3. ...
                     summary_text = "\n\n".join(item["summary"] for item in results)
                     summary_text += "\n\n請輸入想查看的代號（例如：1），來查看完整內容。"
                     line_bot_api.reply_message_with_http_info(
