@@ -197,6 +197,9 @@ user_search_mode = {}
 # 新增：用戶搜尋結果暫存（user_id: List[dict]）
 user_search_results = {}
 
+# 新增：用戶搜尋步驟狀態（user_id: str, value: "wait_keyword" | "wait_select"）
+user_search_step = {}
+
 # === 處理文字訊息 ===
 @handler.add(MessageEvent, message=TextMessageContent)
 def handle_text_message(event):
@@ -208,6 +211,7 @@ def handle_text_message(event):
     if user_input == "我要瀏覽歷史紀錄":
         if user_id:
             user_search_mode[user_id] = True
+            user_search_step[user_id] = "wait_keyword"
         with ApiClient(configuration) as api_client:
             line_bot_api = MessagingApi(api_client)
             ask_msg = (
@@ -226,9 +230,10 @@ def handle_text_message(event):
     if user_input == "結束搜尋":
         if user_id and user_id in user_search_mode:
             user_search_mode[user_id] = False
-            # 清除舊的查詢標號
             if user_id in user_search_results:
                 del user_search_results[user_id]
+            if user_id in user_search_step:
+                del user_search_step[user_id]
         with ApiClient(configuration) as api_client:
             line_bot_api = MessagingApi(api_client)
             msg = "已結束歷史紀錄查詢，請繼續使用其他功能。"
@@ -245,22 +250,18 @@ def handle_text_message(event):
         with ApiClient(configuration) as api_client:
             line_bot_api = MessagingApi(api_client)
             try:
-                logging.info(f"[search_mode] user_id: {user_id}, input: {user_input}, search_results: {user_search_results.get(user_id)}")
-                # 若前次已查詢且輸入為數字或"全部顯示"，則回傳對應內容
-                if user_id in user_search_results and user_search_results[user_id]:
+                # 新增：搜尋步驟判斷
+                step = user_search_step.get(user_id, "wait_keyword")
+                if step == "wait_select" and user_id in user_search_results and user_search_results[user_id]:
                     if user_input.isdigit():
                         idx = int(user_input) - 1
                         results = user_search_results[user_id]
                         if 0 <= idx < len(results):
-                            # 若已經有完整內容則直接回傳，否則即時查詢
                             if results[idx]["full"]:
                                 detail = results[idx]["full"]
                                 reply_text = f"這是您第{idx+1}個規劃的完整內容：\n{detail}"
                             else:
-                                # 重新查詢該筆完整內容
-                                # 只取掉前面的編號，避免 prompt 再帶入 1. 2. 3.
                                 summary = results[idx]["summary"]
-                                # 移除前面的數字與點
                                 import re
                                 summary_no_num = re.sub(r"^\d+\.\s*", "", summary)
                                 prompt = (
@@ -296,70 +297,92 @@ def handle_text_message(event):
                             )
                         )
                         return
-                # 否則進行新查詢
-                # 進行新查詢，請 Gemini 只給與關鍵字有關的紀錄摘要，並分早上/下午/晚上
-                prompt = (
-                    f"請根據你與我的所有對話記憶，查詢與「{user_input}」相關的所有旅遊行程紀錄，"
-                    "只顯示與該關鍵字有關的紀錄。\n"
-                    "如果有多筆，請依下列格式摘要列出，內容請簡短：\n"
-                    "1. 🗓️ [日期] - [行程標題]\n"
-                    "   - 早上：[簡要說明]\n"
-                    "   - 下午：[簡要說明]\n"
-                    "   - 晚上：[簡要說明]\n"
-                    "2. ...\n"
-                    "請勿給完整內容，只給每筆紀錄的簡短摘要，並在每筆前加上代號（1、2、3...）。\n"
-                    "最後請附註：請輸入想查看的代號（例如：1），來查看完整內容。\n"
-                    "如果只有一筆，請直接顯示完整內容，並請分早上、下午、晚上。\n"
-                    "如果沒有相關紀錄，請明確說明。\n"
-                    "請以繁體中文回覆。"
-                )
-                response = query(prompt)
-                logging.info(f"[search_mode] Gemini summary response: {response}")
-                html_msg = markdown.markdown(response)
-                soup = BeautifulSoup(html_msg, "html.parser")
-                # 將多餘空行去除，並用單一換行分隔，縮小間距
-                text = '\n'.join([line.strip() for line in soup.get_text(separator="\n").splitlines() if line.strip()])
-
-                # 解析每一筆摘要，存入 user_search_results 以便後續查詢完整內容
-                import re
-                results = []
-                # 修正：若 Gemini 回傳只有「請輸入想查看的代號」而沒有任何摘要，代表沒有找到紀錄
-                if "請輸入想查看的代號" in text and re.search(r"\d+\.\s", text):
-                    # 解析 1. 2. 3. 開頭的段落
-                    matches = re.findall(r"(\d+)\.\s(.*?)(?=\n\d+\.\s|\Z)", text, re.DOTALL)
-                    for idx, (num, content) in enumerate(matches):
-                        # 嘗試從內容中抓取日期與地點資訊
-                        # 預設格式：🗓️ [日期] - [行程標題]
-                        date_place_match = re.search(r"🗓️\s*([^\s-]+(?:-[^\s-]+)*)\s*-\s*(.+)", content)
-                        if date_place_match:
-                            date_str = date_place_match.group(1).strip()
-                            place_str = date_place_match.group(2).strip()
-                            # 只取第一行作為標題
-                            first_line = f"{idx+1}. {date_str}-{place_str}"
-                            # 其餘內容（去掉第一行）
-                            rest = content.split('\n', 1)[1].strip() if '\n' in content else ""
-                            summary = f"{first_line}\n{rest}" if rest else first_line
-                        else:
-                            # 若無法解析則維持原本內容
-                            summary = f"{idx+1}. {content.strip()}"
-                        # 直接將原始 content 存進 full 欄位
-                        results.append({"summary": summary, "full": content.strip()})
-                    user_search_results[user_id] = results
-                    # 重新組合摘要訊息，前面加上 [編號1] [編號2] ...
-                    summary_text = ""
-                    for i, item in enumerate(results):
-                        lines = item["summary"].split('\n', 1)
-                        summary_text += f"[編號{i+1}] {lines[0]}\n"
-                        if len(lines) > 1:
-                            summary_text += f"{lines[1]}\n"
-                        summary_text += "\n"
-                    summary_text = summary_text.strip() + "\n\n請輸入想查看的代號（例如：1），來查看完整內容。"
-                    line_bot_api.reply_message(
-                        ReplyMessageRequest(
-                            reply_token=event.reply_token,
-                            messages=[TextMessage(text=summary_text)],
+                    else:
+                        # 只允許輸入數字或全部顯示
+                        line_bot_api.reply_message(
+                            ReplyMessageRequest(
+                                reply_token=event.reply_token,
+                                messages=[TextMessage(text="請輸入想查看的編號（例如：1），或輸入「全部顯示」。")],
+                            )
                         )
+                        return
+                # 只有在 wait_keyword 狀態下才允許查詢新關鍵字
+                if step == "wait_keyword":
+                    # 否則進行新查詢
+                    # 進行新查詢，請 Gemini 只給與關鍵字有關的紀錄摘要，並分早上/下午/晚上
+                    prompt = (
+                        f"請根據你與我的所有對話記憶，查詢與「{user_input}」相關的所有旅遊行程紀錄，"
+                        "只顯示與該關鍵字有關的紀錄。\n"
+                        "如果有多筆，請依下列格式摘要列出，內容請簡短：\n"
+                        "1. 🗓️ [日期] - [行程標題]\n"
+                        "   - 早上：[簡要說明]\n"
+                        "   - 下午：[簡要說明]\n"
+                        "   - 晚上：[簡要說明]\n"
+                        "2. ...\n"
+                        "請勿給完整內容，只給每筆紀錄的簡短摘要，並在每筆前加上代號（1、2、3...）。\n"
+                        "最後請附註：請輸入想查看的代號（例如：1），來查看完整內容。\n"
+                        "如果只有一筆，請直接顯示完整內容，並請分早上、下午、晚上。\n"
+                        "如果沒有相關紀錄，請明確說明。\n"
+                        "請以繁體中文回覆。"
                     )
+                    response = query(prompt)
+                    logging.info(f"[search_mode] Gemini summary response: {response}")
+                    html_msg = markdown.markdown(response)
+                    soup = BeautifulSoup(html_msg, "html.parser")
+                    # 將多餘空行去除，並用單一換行分隔，縮小間距
+                    text = '\n'.join([line.strip() for line in soup.get_text(separator="\n").splitlines() if line.strip()])
+
+                    # 解析每一筆摘要，存入 user_search_results 以便後續查詢完整內容
+                    import re
+                    results = []
+                    # 修正：若 Gemini 回傳只有「請輸入想查看的代號」而沒有任何摘要，代表沒有找到紀錄
+                    if "請輸入想查看的代號" in text and re.search(r"\d+\.\s", text):
+                        # 解析 1. 2. 3. 開頭的段落
+                        matches = re.findall(r"(\d+)\.\s(.*?)(?=\n\d+\.\s|\Z)", text, re.DOTALL)
+                        for idx, (num, content) in enumerate(matches):
+                            # 嘗試從內容中抓取日期與地點資訊
+                            # 預設格式：🗓️ [日期] - [行程標題]
+                            date_place_match = re.search(r"🗓️\s*([^\s-]+(?:-[^\s-]+)*)\s*-\s*(.+)", content)
+                            if date_place_match:
+                                date_str = date_place_match.group(1).strip()
+                                place_str = date_place_match.group(2).strip()
+                                # 只取第一行作為標題
+                                first_line = f"{idx+1}. {date_str}-{place_str}"
+                                # 其餘內容（去掉第一行）
+                                rest = content.split('\n', 1)[1].strip() if '\n' in content else ""
+                                summary = f"{first_line}\n{rest}" if rest else first_line
+                            else:
+                                # 若無法解析則維持原本內容
+                                summary = f"{idx+1}. {content.strip()}"
+                            # 直接將原始 content 存進 full 欄位
+                            results.append({"summary": summary, "full": content.strip()})
+                        user_search_results[user_id] = results
+                        user_search_step[user_id] = "wait_select"
+                        # 重新組合摘要訊息，前面加上 [編號1] [編號2] ...
+                        summary_text = ""
+                        for i, item in enumerate(results):
+                            lines = item["summary"].split('\n', 1)
+                            summary_text += f"[編號{i+1}] {lines[0]}\n"
+                            if len(lines) > 1:
+                                summary_text += f"{lines[1]}\n"
+                            summary_text += "\n"
+                        summary_text = summary_text.strip() + "\n\n請輸入想查看的代號（例如：1），來查看完整內容。"
+                        line_bot_api.reply_message(
+                            ReplyMessageRequest(
+                                reply_token=event.reply_token,
+                                messages=[TextMessage(text=summary_text)],
+                            )
+                        )
+                    else:
+                        user_search_results[user_id] = []
+                        user_search_step[user_id] = "wait_keyword"
+                        line_bot_api.reply_message(
+                            ReplyMessageRequest(
+                                reply_token=event.reply_token,
+                                messages=[TextMessage(text=text)],
+                            )
+                        )
+                    logging.info("[search_mode] reply_message_with_http_info sent")
                 else:
                     # 若沒有任何摘要，直接回傳 Gemini 的訊息
                     user_search_results[user_id] = []
