@@ -342,12 +342,11 @@ def handle_text_message(event):
                             summary = f"{idx+1}. {content.strip()}"
                         results.append({"summary": summary, "full": None})
                     user_search_results[user_id] = results
-                    # 重新組合摘要訊息，前面加上 1. 7/5-地點 ...
+                    # 重新組合摘要訊息，前面加上 [編號1] [編號2] ...
                     summary_text = ""
                     for i, item in enumerate(results):
-                        # 每一筆前面再加一次明確的編號
                         lines = item["summary"].split('\n', 1)
-                        summary_text += f"{i+1}. {lines[0]}\n"
+                        summary_text += f"[編號{i+1}] {lines[0]}\n"
                         if len(lines) > 1:
                             summary_text += f"{lines[1]}\n"
                         summary_text += "\n"
